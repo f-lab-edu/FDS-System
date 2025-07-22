@@ -8,7 +8,7 @@ plugins {
     id("org.springframework.boot") version "3.5.3"
     id("io.spring.dependency-management") version "1.1.7"
     id("jacoco")
-    id("org.sonarqube") version "4.4.1.3373"
+    id("org.sonarqube") version "6.2.0.5505"
 }
 
 group = "io.github.hyungkishin"
