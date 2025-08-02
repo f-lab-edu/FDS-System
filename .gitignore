@@ -33,8 +33,13 @@ out/
 /nbdist/
 /.nb-gradle/
 
+.idea/
+/services/transfer/build/
+/services/transfer/**/build/
+
 ### VS Code ###
 .vscode/
 
 # Kotlin Daemon logs
 buildSrc/.kotlin/errors/
+

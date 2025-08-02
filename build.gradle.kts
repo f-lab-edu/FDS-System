@@ -1,137 +1,154 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
-    kotlin("jvm") version "1.9.24"
-    kotlin("plugin.spring") version "1.9.24"
-    kotlin("plugin.jpa") version "1.9.24"
-    kotlin("kapt") version "1.9.24"
-    id("org.springframework.boot") version "3.5.3"
+    id("org.springframework.boot") version "3.3.2" apply false
     id("io.spring.dependency-management") version "1.1.7"
-    id("jacoco")
-    id("org.sonarqube") version "4.4.1.3373"
+    id("com.google.devtools.ksp") version "2.2.0-2.0.2" apply false
+
+    kotlin("jvm") version "2.2.0" apply false
+    kotlin("plugin.spring") version "2.2.0" apply false
+    kotlin("plugin.jpa") version "2.2.0" apply false
+    kotlin("plugin.allopen") version "2.2.0" apply false
 }
 
 group = "io.github.hyungkishin"
 version = "0.0.1-SNAPSHOT"
 
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
+val kotlinVersion = "2.2.0"
+
+allprojects {
+    repositories {
+        mavenCentral()
     }
 }
 
-repositories {
-    mavenCentral()
-}
-
-dependencies {
-    implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.boot:spring-boot-starter-mustache")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
-    implementation("org.jetbrains.kotlin:kotlin-reflect")
-
-    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-    runtimeOnly("org.postgresql:postgresql")
-
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-}
-
-// Kotlin 컴파일 설정
-tasks.withType<KotlinCompile> {
-    kotlinOptions {
-        freeCompilerArgs += "-Xjsr305=strict"
-    }
-}
-
-// Coverage 정책 (LINE ≥ 80% / BRANCH ≥ 70%)
 object CoveragePolicy {
     val line = 0.80.toBigDecimal()
     val branch = 0.70.toBigDecimal()
 }
 
-jacoco {
-    toolVersion = "0.8.11"
-}
+subprojects {
+    apply(plugin = "org.jetbrains.kotlin.jvm")
+    apply(plugin = "org.jetbrains.kotlin.plugin.spring")
+    apply(plugin = "org.jetbrains.kotlin.plugin.jpa")
+    apply(plugin = "org.jetbrains.kotlin.plugin.allopen")
+    apply(plugin = "com.google.devtools.ksp")
+    apply(plugin = "io.spring.dependency-management")
+    apply(plugin = "jacoco")
 
-tasks.test {
-    useJUnitPlatform()
-    finalizedBy("jacocoTestReport") // 순서 보장
-}
-
-tasks.named<JacocoReport>("jacocoTestReport") {
-    dependsOn(tasks.test)
-    finalizedBy("jacocoTestCoverageVerification") // 리포트 생성 후 검증 실행
-
-    classDirectories.setFrom(files(jacocoClassDirs()))
-    sourceDirectories.setFrom(files("src/main/kotlin"))
-    executionData.setFrom(fileTree(layout.buildDirectory).include("/jacoco/test.exec"))
-
-    reports {
-        xml.required.set(true)
-        html.required.set(true)
+    extensions.configure<org.jetbrains.kotlin.allopen.gradle.AllOpenExtension> {
+        annotation("org.springframework.stereotype.Component")
+        annotation("org.springframework.transaction.annotation.Transactional")
+        annotation("org.springframework.context.annotation.Configuration")
+        annotation("org.springframework.boot.autoconfigure.SpringBootApplication")
     }
-}
 
-tasks.named<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
-    classDirectories.setFrom(files(jacocoClassDirs()))
-    sourceDirectories.setFrom(files("src/main/kotlin"))
-    executionData.setFrom(fileTree(layout.buildDirectory).include("/jacoco/test.exec"))
-
-    violationRules {
-        rule {
-            enabled = true
-            element = "BUNDLE"
-            limit {
-                counter = "LINE"
-                value = "COVEREDRATIO"
-                minimum = CoveragePolicy.line
-            }
-            limit {
-                counter = "BRANCH"
-                value = "COVEREDRATIO"
-                minimum = CoveragePolicy.branch
+    configurations.all {
+        resolutionStrategy.eachDependency {
+            if (requested.group == "org.jetbrains.kotlin") {
+                useVersion("2.2.0")
             }
         }
     }
-}
 
-// test + report + verify를 순차 실행하는 task
-tasks.register("testCoverage") {
-    group = "verification"
-    description = "Run tests, generate report, and verify coverage"
-
-    dependsOn("test", "jacocoTestReport", "jacocoTestCoverageVerification")
-    tasks["jacocoTestReport"].mustRunAfter("test")
-    tasks["jacocoTestCoverageVerification"].mustRunAfter("jacocoTestReport")
-}
-
-// check 시 coverage 실행 옵션 ( CI에서만 실행되도록 )
-if (System.getenv("CI") == "true" || project.hasProperty("enableCoverage")) {
-    tasks.named("check") {
-        dependsOn("testCoverage")
+    if (name == "transfer-api") {
+        apply(plugin = "org.springframework.boot")
     }
-}
 
-sonarqube {
-    properties {
-        property("sonar.gradle.skipCompile", "true")
-        property("sonar.projectKey", "f-lab-edu_FDS-System")
-        property("sonar.organization", "f-lab-edu-1")
-        property("sonar.host.url", "https://sonarcloud.io")
-        property("sonar.sources", mutableListOf("src/main/kotlin"))
-        property("sonar.tests", mutableListOf("src/test/kotlin"))
-        property("sonar.sourceEncoding", "UTF-8")
-        property("sonar.java.binaries", mutableListOf("build/classes"))
-        property(
-            "sonar.coverage.jacoco.xmlReportPaths",
-            mutableListOf("build/reports/jacoco/test/jacocoTestReport.xml")
-        )
+    extensions.configure<JavaPluginExtension> {
+        toolchain.languageVersion.set(JavaLanguageVersion.of(21))
+    }
 
-        property("sonar.login", System.getenv("SONAR_TOKEN"))
-        property(
-            "sonar.test.exclusions", sonarExcludePatterns.toMutableList()
-        )
-        property("sonar.test.inclusions", mutableListOf("**/*Test.kt"))
+    tasks.withType<KotlinJvmCompile>().configureEach {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_21)
+            freeCompilerArgs.add("-Xjsr305=strict")
+        }
+    }
+
+    tasks.withType<Test>().configureEach {
+        useJUnitPlatform()
+        testLogging {
+            events("passed", "failed", "skipped")
+            showStandardStreams = true
+        }
+    }
+
+    the<DependencyManagementExtension>().apply {
+        imports {
+            mavenBom("org.springframework.boot:spring-boot-dependencies:3.3.2")
+            mavenBom("io.kotest:kotest-bom:5.8.0")
+        }
+    }
+
+    project.dependencies.apply {
+        add("implementation", "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion")
+        add("implementation", "org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
+
+        add("testImplementation", "org.springframework.boot:spring-boot-starter-test")
+        add("testRuntimeOnly", "org.junit.platform:junit-platform-launcher")
+        add("testImplementation", "io.kotest:kotest-runner-junit5")
+        add("testImplementation", "io.kotest:kotest-assertions-core")
+    }
+
+    if (name in listOf("transfer-domain", "transfer-infra")) {
+        fun Project.jacocoClassDirs(): FileTree =
+            fileTree(layout.buildDirectory.dir("classes/kotlin/main")) {
+                exclude("**/dto/**", "**/config/**")
+            }
+
+        tasks.named<JacocoReport>("jacocoTestReport") {
+
+            dependsOn(tasks.named<Test>("test"))
+            finalizedBy("jacocoTestCoverageVerification")
+
+            classDirectories.setFrom(files(jacocoClassDirs()))
+            sourceDirectories.setFrom(project.layout.projectDirectory.dir("src/main/kotlin"))
+            executionData.setFrom(fileTree(layout.buildDirectory).include("/jacoco/test.exec"))
+
+            reports {
+                xml.required.set(true)
+                html.required.set(true)
+            }
+        }
+
+        tasks.named<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
+            classDirectories.setFrom(files(jacocoClassDirs()))
+            sourceDirectories.setFrom(project.layout.projectDirectory.dir("src/main/kotlin"))
+            executionData.setFrom(fileTree(layout.buildDirectory).include("/jacoco/test.exec"))
+
+            violationRules {
+                rule {
+                    enabled = true
+                    element = "BUNDLE"
+                    limit {
+                        counter = "LINE"
+                        value = "COVERED_RATIO"
+                        minimum = CoveragePolicy.line
+                    }
+                    limit {
+                        counter = "BRANCH"
+                        value = "COVERED_RATIO"
+                        minimum = CoveragePolicy.branch
+                    }
+                }
+            }
+        }
+
+        tasks.register("testCoverage") {
+            group = "verification"
+            description = "Run tests, generate report, and verify coverage"
+            dependsOn("test", "jacocoTestReport", "jacocoTestCoverageVerification")
+            tasks["jacocoTestReport"].mustRunAfter("test")
+            tasks["jacocoTestCoverageVerification"].mustRunAfter("jacocoTestReport")
+        }
+    }
+
+    if (System.getenv("CI") == "true" || project.hasProperty("enableCoverage")) {
+        tasks.named("check") {
+            dependsOn("testCoverage")
+        }
     }
 }

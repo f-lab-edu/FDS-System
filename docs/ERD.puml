@@ -1,141 +1,250 @@
 @startuml
-' 정의
-!define table(x) class x << (T,#FFAAAA) >>
+!define table(name,desc) entity name as "desc" << (T,#FFAAAA) >>
+
 !define primary_key(x) <b>x</b>
-!define foreign_key(x) <i>x</i>
+
+!define unique(x) <b><color:green>x</color></b>
+!define unique(x,y) <color:green>x</color>\n<color:green>y</color>
+
+!define enum(x) <b><color:red>x</color></b>
+
+!define index(x) <color:blue>x</color>
+!define index(x,y) <color:blue>x</color>\n<color:blue>y</color>
+!define index(x,y,z) <color:blue>x</color>\n<color:blue>y</color>\n<color:blue>z</color>
+!define index(x,y,z,i) <color:blue>x</color>\n<color:blue>y</color>\n<color:blue>z</color>\n<color:blue>i</color>
 
 skinparam linetype ortho
+skinparam nodesep 120
+skinparam ranksep 240
+skinparam defaultTextAlignment left
+skinparam classAttributeIconSize 1
+skinparam classFontSize 12
+skinparam classBorderThickness 1
 hide circle
 
-' ==============================
-' 도메인: 사용자
-' ==============================
-package "User Domain" #EFEFEF {
-  table(users) {
-    primary_key(id): UUID
+' ======================================
+' 사용자 도메인
+' ======================================
+package "사용자 도메인" #EFEFEF {
+  table(users, "유저") {
+    primary_key(id): BIGINT <<Snowflake>>
     name: string
     email: string
+    is_transfer_locked: boolean
+    daily_transfer_limit: BIGINT
+    enum(status): status <<enum: ACTIVE, SUSPENDED, DEACTIVATED>>
+    enum(user_role): role <<enum: USER, ADMIN, AUDITOR>>
     created_at: datetime
-    -- UNIQUE(email)
-  }
-
-  table(account_balances) {
-    primary_key(user_id): UUID
-    balance: bigint
     updated_at: datetime
+    --
+    index(email, created_at)
+    index(status)
+    index(role)
+  }
+
+  table(account_balances, "계좌 잔액") {
+    primary_key(user_id): BIGINT <<Snowflake>>
+    balance: bigint
+    currency: currency_code<<enum: KRW>>
+    created_at: datetime
+    updated_at: datetime
+    --
+    index(created_at, updated_at)
+  }
+
+  table(wallet_addresses, "지갑 주소 (phase-3)") {
+    primary_key(id): BIGINT <<Snowflake>>
+    user_id: BIGINT
+    unique(address): string
+    chain_code: string
+    registered_at: datetime
+    --
+    index(user_id, chain_code)
   }
 }
-
 users ||--|| account_balances : owns_balance
+users ||--o{ wallet_addresses : has_wallet
 
-' ==============================
-' 도메인: 관리자
-' ==============================
-package "Admin Domain" #FFF5E1 {
-  table(admin_users) {
-    primary_key(id): UUID
+' ======================================
+' 관리자 도메인
+' ======================================
+package "관리자 도메인" #FFF5E1 {
+  table(admin_users, "관리자") {
+    primary_key(id): BIGINT <<Snowflake>>
+    unique(email): string
+    enum(role): string <<enum: ADMIN, AUDITOR>>
     username: string
-    email: string
-    role: string <<enum: ADMIN, AUDITOR>>
     created_at: datetime
-    -- UNIQUE(username)
-    -- UNIQUE(email)
+    --
+    index(role)
+    index(created_at)
   }
 }
 
-' ==============================
-' 도메인: 송금 및 정정
-' ==============================
-package "Transaction Domain" #E1F5FE {
-  table(transactions) {
-    primary_key(id): UUID
-    foreign_key(sender_user_id): UUID
-    foreign_key(receiver_user_id): UUID
+' ======================================
+' 송금 도메인
+' ======================================
+package "송금 도메인" #E1F5FE {
+  table(transactions, "송금 트랜잭션") {
+    primary_key(id): BIGINT <<Snowflake>>
+    sender_user_id: BIGINT
+    receiver_user_id: BIGINT
     amount: bigint
-    status: string <<enum: PENDING, COMPLETED, FAILED, CORRECTED>>
+    enum(status): string <<enum: PENDING, COMPLETED, FAILED, CORRECTED>>
+    exchange_rate_id: BIGINT
+    received_at: datetime?
     created_at: datetime
-    -- INDEX(sender_user_id)
-    -- INDEX(receiver_user_id)
-    -- INDEX(created_at DESC)
+    --
+    index(sender_user_id, created_at)
+
+    index(receiver_user_id, created_at)
   }
 
-  table(tx_history) {
-    primary_key(id): UUID
-    foreign_key(tx_id): UUID
-    prev_status: string
-    next_status: string
-    changed_at: datetime
-    foreign_key(changed_by): UUID
-    -- INDEX(tx_id)
+  table(tx_history, "상태 변경 이력") {
+    primary_key(id): BIGINT <<Snowflake>>
+    unique(tx_id): BIGINT
+    changed_by: BIGINT
+    enum(prev_status): string
+    enum(next_status): string
+    created_at: datetime
+    updated_at: datetime
+    --
+    index(tx_id)
   }
 
-  table(correction_log) {
-    primary_key(id): UUID
-    foreign_key(tx_id): UUID
+  table(correction_log, "정정 로그") {
+    primary_key(id): BIGINT <<Snowflake>>
+    unique(tx_id): BIGINT
+    new_tx_id: BIGINT
     amount: bigint
-    restored_at: datetime
-    foreign_key(restored_by): UUID
+    restored_by: BIGINT
     reason: string
-    -- UNIQUE(tx_id)
+    restored_at: datetime
+    --
+    index(tx_id, restored_by)
+    index(new_tx_id, restored_by)
   }
 }
-
 users ||--o{ transactions : sends
 users ||--o{ transactions : receives
-
 transactions ||--o{ tx_history : has_status_log
 transactions ||--o{ correction_log : has_correction
 admin_users ||--o{ tx_history : modified_by
 admin_users ||--o{ correction_log : corrected_by
 
-' ==============================
-' 도메인: 이상 거래 탐지
-' ==============================
-package "Risk Detection Domain" #F1F8E9 {
-  table(risk_logs) {
-    primary_key(id): UUID
-    foreign_key(tx_id): UUID
+' ======================================
+' 온체인 도메인
+' ======================================
+package "온체인 도메인 (phase-3)" #F3E5F5 {
+  table(wallet_transfers, "온체인 송금") {
+    primary_key(id): BIGINT <<Snowflake>>
+    tx_id: BIGINT
+    from_wallet_id: BIGINT
+    to_wallet_id: BIGINT
+    to_user_id: BIGINT
+    exchange_rate_id: BIGINT
+    token_symbol: string
+    chain_code: string
+    amount: bigint
+    status: string <<enum: REQUESTED, PENDING, CONFIRMED, FAILED>>
+    onchain_tx_id: string
+    created_at: datetime
+    --
+    index(from_wallet_id)
+    index(to_wallet_id)
+    index(to_user_id)
+    index(status)
+    index(onchain_tx_id)
+    index(chain_code, token_symbol, status)
+  }
+
+  table(onchain_tx_logs, "온체인 로그") {
+    primary_key(id): BIGINT <<Snowflake>>
+    foreign_key(wallet_transfer_id): BIGINT
+    tx_hash: string
+    status: string <<enum: SENT, CONFIRMED, REORGED, DROPPED>>
+    confirmed_block: int?
+    confirmed_at: datetime?
+    -- INDEX(tx_hash)
+    -- INDEX(wallet_transfer_id, status)
+  }
+
+  table(tokens, "토큰") {
+    primary_key(symbol): string
+    name: string
+    decimals: int
+    contract_address: string
+    chain_code: string
+    -- INDEX(chain_code)
+  }
+
+  table(chains, "체인") {
+    primary_key(code): string
+    name: string
+    rpc_url: string
+    explorer_url: string
+  }
+}
+wallet_addresses ||--o{ wallet_transfers : from_wallet
+wallet_addresses ||--o{ wallet_transfers : to_wallet
+wallet_transfers ||--o{ onchain_tx_logs : tracked_by
+tokens ||--o{ wallet_transfers : used_token
+chains ||--o{ wallet_addresses : registered_on
+chains ||--o{ wallet_transfers : transferred_on
+chains ||--o{ tokens : supports
+
+' ======================================
+' 이상거래탐지 도메인
+' ======================================
+package "이상거래탐지 도메인 (phase-2)" #F1F8E9 {
+  table(risk_logs, "탐지 로그") {
+    primary_key(id): BIGINT <<Snowflake>>
+    tx_id: BIGINT
     rule_hit: boolean
     ai_score: float
     final_decision: string <<enum: PASS, REVIEW, BLOCK>>
     evaluated_at: datetime
-    -- INDEX(tx_id)
-    -- INDEX(final_decision)
+    --
+    index(tx_id, final_decision)
+    index(evaluated_at)
   }
 
-  table(risk_rule_hits) {
-    primary_key(id): UUID
-    foreign_key(risk_log_id): UUID
-    foreign_key(rule_id): UUID
+  table(risk_rule_hits, "룰 매칭 결과") {
+    primary_key(id): BIGINT <<Snowflake>>
+    risk_log_id: BIGINT
+    rule_id: BIGINT
     hit: boolean
     score: float
-    -- INDEX(rule_id)
-    -- INDEX(risk_log_id)
+    --
+    index(rule_id)
+    index(risk_log_id)
   }
 
-  table(rules) {
-    primary_key(id): UUID
-    rule_name: string
-    condition_json: json <<JSON DSL: {"amount_gt":1000000} >>
+  table(rules, "탐지 룰") {
+    primary_key(id): BIGINT <<Snowflake>>
+    unique(rule_name): string
+    condition_json: json
     threshold: int
     enabled: boolean
     created_at: datetime
-    -- UNIQUE(rule_name)
+    --
+    index(created_at)
   }
 
-  table(rule_history) {
-    primary_key(id): UUID
-    foreign_key(rule_id): UUID
+  table(rule_history, "룰 변경 이력") {
+    primary_key(id): BIGINT <<Snowflake>>
+    foreign_key(rule_id): BIGINT
     version: int
     condition_json: json
     threshold: int
-    foreign_key(created_by): UUID
+    foreign_key(created_by): BIGINT
     created_at: datetime
-    -- UNIQUE(rule_id, version)
-    -- INDEX(rule_id, created_at DESC)
+    --
+    unique(rule_id, version)
+
+    index(rule_id, created_at)
   }
 }
-
 transactions --> risk_logs : evaluated_by
 risk_logs --> risk_rule_hits : hit_detail
 risk_logs --> rule_history : applied_version
@@ -143,22 +252,39 @@ rules ||--o{ rule_history : versioned
 rules ||--o{ risk_rule_hits : matched_rule
 admin_users ||--o{ rule_history : created_by
 
-' ==============================
-' 도메인: Infra / 장애
-' ==============================
-package "Infra / DLQ Domain" #FCE4EC {
-  table(dlq_events) {
-    primary_key(id): UUID
-    foreign_key(tx_id): UUID
+' ======================================
+' 환율 도메인
+' ======================================
+package "환율 도메인 (phase-3)" #E8F5E9 {
+  table(exchange_rates, "환율") {
+    primary_key(id): BIGINT <<Snowflake>>
+    from_currency: string
+    to_currency: string
+    rate: decimal(18,8)
+    fetched_at: datetime
+    source: string
+    is_batch: boolean
+    --
+    index(from_currency, to_currency, source, fetched_at)
+  }
+}
+
+' ======================================
+' 장애(DLQ) 도메인
+' ======================================
+package "장애 기록 도메인" #FCE4EC {
+  table(dlq_events, "DLQ 이벤트") {
+    primary_key(id): BIGINT <<Snowflake>>
+    tx_id: BIGINT
     component: string
     error_message: string
     received_at: datetime
     resolved: boolean
     resolved_at: datetime
-    -- INDEX(tx_id)
+    --
+    index(tx_id)
   }
 }
-
 transactions ||--o{ dlq_events : error_occurred
 
 @enduml

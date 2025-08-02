@@ -20,11 +20,12 @@
 | `correction_log` | **이상 트랜잭션의 수정 이력.**<br/>금액 재조정 등 수동 조치 기록. 관리자 개입 포함             |
 
 관계
-- transactions -> tx_history: 트랜잭션의 상태 변경 로그
+- transactions -> tx_history: 트랜잭션 의 상태 변경 로그
 - transactions -> correction_log: 수동 수정 발생 시 기록
 - admin_users -> tx_history, correction_log: 변경자/수정자 추적을 위한 FK 포함
 
 ### 상태흐름
+
 > [PENDING] -> [RISK_EVALUATION] -> [REVIEW | PASS | BLOCK] -> [COMPLETED or CORRECTED]
 
 ## Risk Detection Domain – 이상 거래 탐지 및 룰 관리
@@ -63,6 +64,7 @@
 - transactions -> dlq_events: 트랜잭션 처리 중 장애 발생 시 DLQ 기록
 
 ## 전체 흐름
+
 ```text
 users
   ├──> transactions
@@ -132,9 +134,9 @@ B 친구에게 5만 원을 송금하려고 한다. 이 요청은 `transactions`�
 
 ### 시나리오
 사용자의 송금이 1,000,000원을 넘는 금액이라 FDS 룰 조건에 매칭되었다.  
--> 평가 결과는 `risk_logs`에 저장되고  
--> 어떤 룰이 hit 되었는지는 `risk_rule_hits`에 기록됨  
--> 최종 판단(`BLOCK`)으로 이어질 수도 있음
+- 평가 결과는 `risk_logs`에 저장되고  
+- 어떤 룰이 hit 되었는지는 `risk_rule_hits`에 기록됨
+- 최종 판단(`BLOCK`)으로 이어질 수도 있음
 
 ### 흐름 요약
 ```
