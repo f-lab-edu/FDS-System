@@ -7,4 +7,20 @@ data class TransferResponse(
     val status: String,
     val createdAt: LocalDateTime,
     val receivedAt: LocalDateTime?
-)
+) {
+    companion object {
+        fun of(
+            transactionId: Long,
+            status: String,
+            createdAt: LocalDateTime,
+            receivedAt: LocalDateTime?
+        ): TransferResponse {
+            return TransferResponse(
+                transactionId = transactionId,
+                status = status,
+                createdAt = createdAt,
+                receivedAt = receivedAt
+            )
+        }
+    }
+}

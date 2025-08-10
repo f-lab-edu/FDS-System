@@ -1,6 +1,6 @@
 package io.github.hyungkishin.transentia.application.port.`in`
 
-import io.github.hyungkishin.transentia.common.snowflake.UserId
+import io.github.hyungkishin.transentia.shared.snowflake.UserId
 import io.github.hyungkishin.transentia.domain.model.Money
 
 data class TransferRequestCommand(

@@ -39,7 +39,7 @@ class MoneyTest : StringSpec({
         val a = Money.fromDecimalString("1.0")
         val b = Money.fromDecimalString("2.0")
         shouldThrowExactly<IllegalArgumentException> {
-            a.subtractOrThrow(b)
+            a.subtract(b)
         }
     }
 

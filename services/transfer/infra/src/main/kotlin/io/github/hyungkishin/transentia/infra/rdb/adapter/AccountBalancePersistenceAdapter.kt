@@ -1,7 +1,7 @@
 package io.github.hyungkishin.transentia.infra.rdb.adapter
 
 import io.github.hyungkishin.transentia.application.port.out.AccountBalanceRepository
-import io.github.hyungkishin.transentia.common.snowflake.UserId
+import io.github.hyungkishin.transentia.shared.snowflake.UserId
 import io.github.hyungkishin.transentia.domain.model.AccountBalance
 import io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity
 import io.github.hyungkishin.transentia.infra.rdb.repository.AccountBalanceJpaRepository

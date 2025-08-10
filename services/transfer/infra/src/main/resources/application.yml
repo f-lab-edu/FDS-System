@@ -1,0 +1,5 @@
+id:
+  snowflake:
+    node-id: 1 # TODO : 환경변수로 주입된 nodeId를 사용해야 한다. -> node-id: ${SNOWFLAKE_NODE_ID:0}  # 기본값은 0 이고, 환경변수로 덮어쓴다.
+    custom-epoch: 1704067200000
+    max-clock-backward-ms: 5

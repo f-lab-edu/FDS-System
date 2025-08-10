@@ -6,8 +6,5 @@ spring:
     password: pass1234
   jpa:
     hibernate:
-      ddl-auto: update # TODO : 개발 환경에서는 update, 운영 환경에서는 none 으로 설정한다.
+      ddl-auto: create # TODO : 개발 환경에서는 update, 운영 환경에서는 none 으로 설정한다.
     show-sql: true
-
-snowflake:
-  node-id: 1 # TODO : 환경변수로 주입된 nodeId를 사용해야 한다. -> node-id: ${SNOWFLAKE_NODE_ID:0}  # 기본값은 0 이고, 환경변수로 덮어쓴다.

@@ -29,5 +29,12 @@ services.forEach { service ->
     }
 }
 
-include("common")
-project(":common").projectDir = file("common")
+include("shared-kernel")
+project(":shared-kernel").projectDir = file("common/shared-kernel")
+
+
+include("delivery-http-starter")
+project(":delivery-http-starter").projectDir = file("common/delivery-http-starter")
+
+include("shared-domain-error")
+project(":shared-domain-error").projectDir = file("common/shared-domain-error")

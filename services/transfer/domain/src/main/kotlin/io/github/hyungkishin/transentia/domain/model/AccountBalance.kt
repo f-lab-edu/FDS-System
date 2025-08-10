@@ -1,6 +1,8 @@
 package io.github.hyungkishin.transentia.domain.model
 
-import io.github.hyungkishin.transentia.common.snowflake.UserId
+import io.github.hyungkishin.transentia.shared.error.CommonError
+import io.github.hyungkishin.transentia.shared.error.DomainException
+import io.github.hyungkishin.transentia.shared.snowflake.UserId
 
 class AccountBalance private constructor(
     val userId: UserId,
@@ -17,9 +19,15 @@ class AccountBalance private constructor(
         balance = balance.add(amount)
     }
 
-    fun withdraw(amount: Money) {
-        require(balance >= amount) { "사용자 $userId 의 잔액이 부족합니다." }
-        balance = balance.subtractOrThrow(amount)
+    /** 출금, 실패 시 도메인 예외 */
+    fun withdrawOrThrow(amount: Money) {
+        if (balance < amount) {
+            throw DomainException(
+                CommonError.InvalidArgument(field = "amount", reason = "insufficient_balance"),
+                detail = "잔액이 부족합니다. 현재잔액=$balance, 요청금액=$amount"
+            )
+        }
+        balance = balance.subtract(amount)
     }
 
     fun current(): Money = balance

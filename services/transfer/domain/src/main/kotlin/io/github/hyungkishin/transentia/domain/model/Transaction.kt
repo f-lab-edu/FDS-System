@@ -1,10 +1,11 @@
 package io.github.hyungkishin.transentia.domain.model
 
-import io.github.hyungkishin.transentia.common.snowflake.TransferId
-import io.github.hyungkishin.transentia.common.snowflake.UserId
+import io.github.hyungkishin.transentia.shared.snowflake.TransferId
+import io.github.hyungkishin.transentia.shared.snowflake.UserId
 import io.github.hyungkishin.transentia.domain.common.enums.TransactionStatus
 import java.time.LocalDateTime
 
+// TODO : 왜 Data class 는 안될까 ? -> 고민
 class Transaction private constructor(
     val id: TransferId,
     val senderUserId: UserId,
@@ -16,7 +17,7 @@ class Transaction private constructor(
 ) {
 
     companion object {
-        fun request(
+        fun of(
             transactionId: TransferId,
             senderUserId: UserId,
             receiverUserId: UserId,
