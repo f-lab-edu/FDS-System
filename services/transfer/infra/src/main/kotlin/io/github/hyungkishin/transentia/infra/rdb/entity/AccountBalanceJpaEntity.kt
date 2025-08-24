@@ -1,6 +1,6 @@
 package io.github.hyungkishin.transentia.infra.rdb.entity
 
-import io.github.hyungkishin.transentia.common.snowflake.UserId
+import io.github.hyungkishin.transentia.shared.snowflake.UserId
 import io.github.hyungkishin.transentia.domain.model.AccountBalance
 import io.github.hyungkishin.transentia.domain.model.Money
 import io.github.hyungkishin.transentia.infra.config.BaseEntity
@@ -19,7 +19,7 @@ class AccountBalanceJpaEntity(
     @Column(nullable = false)
     val balance: Long
 
-): BaseEntity() {
+) : BaseEntity() {
     fun toDomain(): AccountBalance =
         AccountBalance.initialize(UserId(userId), Money.fromRawValue(balance))
 
@@ -30,13 +30,5 @@ class AccountBalanceJpaEntity(
                 balance = domain.current().rawValue
             )
     }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is AccountBalanceJpaEntity) return false
-        return userId == other.userId
-    }
-
-    override fun hashCode(): Int = userId.hashCode()
 
 }

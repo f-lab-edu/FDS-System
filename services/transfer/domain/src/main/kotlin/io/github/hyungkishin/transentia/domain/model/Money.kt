@@ -14,14 +14,12 @@ value class Money private constructor(val rawValue: Long) : Comparable<Money> {
         private const val SCALE = 8
         private const val SCALE_FACTOR = 100_000_000L
 
-        /**
-         * 외부에서 사용할 수 있는 유일한 생성 메서드.
-         * "123.456"과 같이 소수점 8자리 이하 숫자만 허용됨.
-         */
+        // Regex 는 Pattern 컴파일을 하기 때문에 비싼 연산 이므로, 캐싱한다.
+        private val DECIMAL_RE = Regex("""^\d+(\.\d{1,8})?$""")
+
         fun fromDecimalString(input: String): Money {
-            require(input.matches(Regex("""^\d+(\.\d{1,8})?$"""))) {
-                "소수점 8자리 이하의 숫자만 허용됩니다: $input"
-            }
+            require(DECIMAL_RE.matches(input)) { "소수점 8자리 이하의 숫자만 허용됩니다: $input" }
+
             val parts = input.split(".")
             val whole = parts[0].toLong()
             val fraction = if (parts.size > 1)
@@ -30,36 +28,34 @@ value class Money private constructor(val rawValue: Long) : Comparable<Money> {
             return fromRawValue(whole * SCALE_FACTOR + fraction)
         }
 
-        /**
-         * [infra] 또는 [test] 계층에서 DB 복원/변환 시 사용 가능.
-         */
         fun fromRawValue(raw: Long): Money {
             require(raw >= 0L) { "금액은 음수일 수 없습니다." }
             return Money(raw)
         }
     }
 
-    // 내부 도메인에서만 사용하는 연산자들
-    internal fun add(other: Money): Money =
-        fromRawValue(this.rawValue + other.rawValue)
+    // 도메인 규칙에 의해 잔액 검사는 밖에서 하고, 순수 연산만 진행한다
+    internal fun add(other: Money): Money {
+        // overflow guard
+        require(rawValue <= Long.MAX_VALUE - other.rawValue) { "금액 덧셈 오버플로우" }
+        return fromRawValue(rawValue + other.rawValue)
+    }
 
-    internal fun subtractOrThrow(other: Money): Money {
-        require(this.rawValue >= other.rawValue) { "금액은 0원 미만이 될 수 없습니다." }
-        return fromRawValue(this.rawValue - other.rawValue)
+    internal fun subtract(other: Money): Money {
+        // underflow guard (음수 금지)
+        require(rawValue >= other.rawValue) { "금액은 0원 미만이 될 수 없습니다." }
+        return fromRawValue(rawValue - other.rawValue)
     }
 
     internal fun isPositive(): Boolean = rawValue > 0L
     internal fun isZero(): Boolean = rawValue == 0L
 
-    override fun compareTo(other: Money): Int = this.rawValue.compareTo(other.rawValue)
+    override fun compareTo(other: Money): Int = rawValue.compareTo(other.rawValue)
 
     override fun toString(): String {
         val whole = rawValue / SCALE_FACTOR
         val fraction = rawValue % SCALE_FACTOR
-        return if (fraction == 0L) {
-            whole.toString()
-        } else {
-            "%d.%0${SCALE}d".format(whole, fraction).trimEnd('0').trimEnd('.')
-        }
+        return if (fraction == 0L) whole.toString()
+        else "%d.%0${SCALE}d".format(whole, fraction).trimEnd('0').trimEnd('.')
     }
 }

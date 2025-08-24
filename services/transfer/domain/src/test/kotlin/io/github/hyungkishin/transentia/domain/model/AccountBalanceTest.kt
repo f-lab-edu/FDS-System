@@ -1,6 +1,7 @@
 package io.github.hyungkishin.transentia.domain.model
 
-import io.github.hyungkishin.transentia.common.snowflake.UserId
+import io.github.hyungkishin.transentia.shared.error.DomainException
+import io.github.hyungkishin.transentia.shared.snowflake.UserId
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
@@ -23,14 +24,14 @@ class AccountBalanceTest {
 
     @Test
     fun `출금 시 잔액이 감소한다`() {
-        account.withdraw(Money.fromDecimalString("30.00"))
+        account.withdrawOrThrow(Money.fromDecimalString("30.00"))
         assertEquals(Money.fromDecimalString("70.00"), account.current())
     }
 
     @Test
     fun `잔액보다 많은 금액을 출금하면 예외가 발생한다`() {
-        val exception = assertThrows(IllegalArgumentException::class.java) {
-            account.withdraw(Money.fromDecimalString("1000.00"))
+        val exception = assertThrows(DomainException::class.java) {
+            account.withdrawOrThrow(Money.fromDecimalString("1000.00"))
         }
         println(exception.message)
     }
@@ -38,9 +39,9 @@ class AccountBalanceTest {
     @Test
     fun `여러 번 입출금해도 잔액 정합성이 유지된다`() {
         val acc = AccountBalance.initialize(userId, Money.fromDecimalString("200.00"))
-        acc.withdraw(Money.fromDecimalString("50.00"))
+        acc.withdrawOrThrow(Money.fromDecimalString("50.00"))
         acc.deposit(Money.fromDecimalString("80.00"))
-        acc.withdraw(Money.fromDecimalString("30.00"))
+        acc.withdrawOrThrow(Money.fromDecimalString("30.00"))
         assertEquals(Money.fromDecimalString("200.00"), acc.current())
     }
 
