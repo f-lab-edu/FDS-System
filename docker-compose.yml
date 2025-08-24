@@ -2,17 +2,94 @@ version: "3.8"
 
 services:
   postgres:
-    image: postgres:15
-    container_name: fds-postgres
-    restart: always
+    image: postgres:15                                # 15는 LTS 급 안정성 + 최신 기능 균형. 로컬 개발엔 충분
+    container_name: transfer-postgres                 # compose ps에서 식별 쉬움 (transfer 네이밍 일관성)
+    restart: always                                   # 컨테이너 재시작 시 자동 복구
     ports:
-      - "5432:5432"
+      - "5432:5432"                                   # 호스트에서 직접 접속(애플리케이션 로컬 실행)을 위해 포트 노출
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: pass1234
-      POSTGRES_DB: fds
+      POSTGRES_USER: postgres                         # 개발 편의 기본 계정
+      POSTGRES_PASSWORD: pass1234                     # 로컬 개발용 임시 비밀번호
+      POSTGRES_DB: transfer                           # 서비스별 DB 분리 (transfer 전용)
     volumes:
-      - pg_data:/var/lib/postgresql/data
+      - pg_data:/var/lib/postgresql/data              # 데이터 영속화 (컨테이너 재기동/재생성에도 보존)
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d transfer" ]  # DB 기동 완료 시점을 compose 가 인지
+      interval: 5s                                    # TODO: 빠른 개발 사이클에 맞춘 짧은 간격 -> 운영 고려
+      timeout: 3s
+      retries: 10
+
+  kafka:
+    image: bitnami/kafka:3.7                          # Kafka 3.x + KRaft 지원, 로컬에서 가볍고 표준적
+    container_name: transfer-kafka                    # 네이밍 통일(transfer), ps/logs에서 검색 쉬움
+    restart: unless-stopped                           # 명시적으로 중지하기 전까지 자동 재시작
+    ports:
+      - "9094:9094"                                   # 호스트에서 접속할 외부용 리스너(EXTERNAL) 포트로 9094 사용 (내부 9092와 구분)
+    environment:
+      KAFKA_ENABLE_KRAFT: "yes"                       # ZK 미사용(KRaft) 모드 활성화
+      KAFKA_CFG_PROCESS_ROLES: "broker,controller"    # 단일 노드 개발환경 → 브로커/컨트롤러 겸용
+      KAFKA_CFG_NODE_ID: "1"                          # KRaft는 노드별 고유 ID 필요
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: "CONTROLLER"         # 컨트롤러 통신용 리스너 이름 지정
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"        # 단일 노드 쿼럼(개발용). 멀티 노드 되면 3개 이상으로 확장
+
+      # 리스너 3종(내부/외부/컨트롤러)을 분리
+      KAFKA_CFG_LISTENERS: "PLAINTEXT://:9092,EXTERNAL://:9094,CONTROLLER://:9093"  # 컨테이너 내부/외부/컨트롤러 용도 분리
+      KAFKA_CFG_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094"
+      # 메타데이터 광고 주소 분리: 컨테이너 내부는 서비스명 kafka, 호스트는 localhost:9094로 접속하게 하여 '메타데이터 루프백' 문제 방지
+
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT"
+      # 로컬 개발은 보안 단순화(PLAINTEXT). 운영 전환 시 TLS/SASL로 변경
+
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"         # 브로커-브로커 통신은 내부 리스너로 통일
+      ALLOW_PLAINTEXT_LISTENER: "yes"                            # bitnami 이미지 보안 가드 해제(개발용 허용)
+
+      # 단일 노드이므로 RF/ISR을 1로 강제
+      KAFKA_CFG_DEFAULT_REPLICATION_FACTOR: "1"                 # 단일 브로커에서 복제 불가 → 1
+      KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"           # 내부 토픽도 단일 복제
+      KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"   # 트랜잭션 상태 로그도 단일 복제
+      KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR: "1"              # 단일 노드에서 ISR 최소 1 필요
+
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "false"              # 토픽은 명시적으로 생성(스키마/파티션 통제)
+      KAFKA_CFG_LOG_RETENTION_HOURS: "168"                      # 개발 기본 7일 보관(테스트 데이터 누적 방지/디스크 관리)
+
+      # 선택: KRaft 클러스터 ID 고정 (문제 시 주석 처리해 자동 생성에 맡겨도 됨)
+      KAFKA_KRAFT_CLUSTER_ID: "aaaaaaaaaaaaaaaaaaaaaa"          # 재기동/볼륨 유지 시 동일 클러스터로 인식
+    healthcheck:
+      test: [ "CMD-SHELL", "/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1" ]
+      # 브로커가 토픽 목록 조회가 가능해야 'healthy' 판단 → 내부 리스너(9092)로 자체 점검
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - kafka_data:/bitnami/kafka                        # 로그/메타데이터 영속화(클러스터 ID/토픽 유지)
+
+  init-topics:
+    image: bitnami/kafka:3.7                             # kafka CLI 사용을 위해 동일 이미지
+    container_name: transfer-kafka-init                  # 1회성 초기화 Job 식별
+    depends_on:
+      kafka:
+        condition: service_healthy                       # 브로커가 살아있을 때만 토픽 생성 시도
+    entrypoint: [ "/bin/bash","-lc" ]                      # 멀티 커맨드/셸 파이프 사용 위해 bash -lc
+    command: >
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092
+      --create --if-not-exists --topic transfer-events --partitions 24 --replication-factor 1 &&
+      echo 'topics created'
+      # 자동생성 OFF 이므로 명시 생성. 파티션=24는 '컨슈머 동시성×2' 출발점 가이드
+    restart: "no"                                        # 초기화 1회만 실행
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest                 # TODO: 개발 중 토픽/메시지 관찰 (운영 시 고려 필요.)
+    container_name: transfer-kafka-ui
+    restart: unless-stopped                              # 개발 중 웹 UI 유지
+    ports:
+      - "9000:8080"                                      # 호스트 8000에서 접속 (http://localhost:8000)
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local                       # UI 내 클러스터 식별명
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092      # 컨테이너 네트워크 내부 주소 사용
+    depends_on:
+      kafka:
+        condition: service_healthy                       # 브로커 준비 후 UI 기동
 
 volumes:
-  pg_data:
+  pg_data:                                               # Postgres 데이터 영속 볼륨
+  kafka_data:                                            # Kafka 로그/메타데이터 영속 볼륨

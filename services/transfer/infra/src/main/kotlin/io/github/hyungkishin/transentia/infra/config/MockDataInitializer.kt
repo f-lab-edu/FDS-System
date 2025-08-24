@@ -1,9 +1,9 @@
 package io.github.hyungkishin.transentia.infra.config
 
-import io.github.hyungkishin.transentia.application.port.out.AccountBalanceRepository
+import io.github.hyungkishin.transentia.application.required.AccountBalanceRepository
 import io.github.hyungkishin.transentia.common.snowflake.UserId
-import io.github.hyungkishin.transentia.domain.model.AccountBalance
-import io.github.hyungkishin.transentia.domain.model.Money
+import io.github.hyungkishin.transentia.consumer.model.AccountBalance
+import io.github.hyungkishin.transentia.consumer.model.Money
 import org.springframework.boot.CommandLineRunner
 import org.springframework.stereotype.Component
 
