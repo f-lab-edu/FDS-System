@@ -7,7 +7,7 @@ plugins {
     id("io.spring.dependency-management") version "1.1.7"
     kotlin("jvm") version "1.9.25" apply false
     kotlin("plugin.spring") version "1.9.25" apply false
-    kotlin("plugin.jpa") version "1.9.25" apply false
+    kotlin("plugin.jpa") version "2.2.10" apply false
     kotlin("plugin.allopen") version "1.9.25" apply false
 }
 
