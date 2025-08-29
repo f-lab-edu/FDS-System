@@ -5,7 +5,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 plugins {
     id("org.springframework.boot") version "3.3.2" apply false
     id("io.spring.dependency-management") version "1.1.7"
-    kotlin("jvm") version "1.9.25" apply false
+    kotlin("jvm") version "2.2.10" apply false
     kotlin("plugin.spring") version "1.9.25" apply false
     kotlin("plugin.jpa") version "1.9.25" apply false
     kotlin("plugin.allopen") version "1.9.25" apply false
