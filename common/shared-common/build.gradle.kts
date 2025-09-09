@@ -7,7 +7,7 @@ java {
 }
 
 dependencies {
-    api("org.slf4j:slf4j-api:2.0.13")
+    api("org.slf4j:slf4j-api:2.0.17")
     compileOnly("jakarta.validation:jakarta.validation-api:3.0.2")
 
     testImplementation(kotlin("test"))
