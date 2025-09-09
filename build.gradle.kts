@@ -14,7 +14,7 @@ plugins {
 group = "io.github.hyungkishin"
 version = "0.0.1-SNAPSHOT"
 
-val kotlinVersion = "1.9.25"
+val kotlinVersion = "2.2.10"
 
 // 실행 가능한 Spring Boot 앱 모듈
 val bootApps = setOf("transfer-api", "transfer-publisher", "transfer-consumer")
