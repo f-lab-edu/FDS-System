@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
-    id("org.springframework.boot") version "3.3.2" apply false
+    id("org.springframework.boot") version "3.5.5" apply false
     id("io.spring.dependency-management") version "1.1.7"
     kotlin("jvm") version "1.9.25" apply false
     kotlin("plugin.spring") version "1.9.25" apply false
@@ -88,7 +88,7 @@ subprojects {
     plugins.withId("io.spring.dependency-management") {
         the<DependencyManagementExtension>().apply {
             imports {
-                mavenBom("org.springframework.boot:spring-boot-dependencies:3.3.2")
+                mavenBom("org.springframework.boot:spring-boot-dependencies:3.5.5")
                 mavenBom("io.kotest:kotest-bom:5.8.0")
             }
         }
