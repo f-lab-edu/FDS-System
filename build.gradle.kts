@@ -89,7 +89,7 @@ subprojects {
         the<DependencyManagementExtension>().apply {
             imports {
                 mavenBom("org.springframework.boot:spring-boot-dependencies:3.3.2")
-                mavenBom("io.kotest:kotest-bom:5.8.0")
+                mavenBom("io.kotest:kotest-bom:6.0.4")
             }
         }
     }
