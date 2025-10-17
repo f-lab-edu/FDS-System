@@ -57,22 +57,13 @@ kafka-consumer-config:
 app:
   outbox:
     relay:
-      # 배치 처리 설정
-      batchSize: 500                      # 한 번에 처리할 최대 이벤트 수
-      fixedDelayMs: 1000                  # 배치 처리 간격 (1초)
-      initialDelayMs: 5000                # 애플리케이션 시작 후 첫 실행 대기 시간 (5초)
-      
-      # 멀티 스레드 설정
-      threadPoolSize: 8                   # 멀티 스레드 풀 크기 (CPU 코어 수 × 2 권장)
-      timeoutSeconds: 10                  # Kafka 전송 타임아웃 (초)
-      
-      # 재시도 정책
-      baseBackoffMs: 5000                 # 재시도 기본 백오프 시간 (5초)
-      maxBackoffMs: 600000                # 재시도 최대 백오프 시간 (10분)
-      stuckThresholdSeconds: 120          # Stuck SENDING 감지 임계값 (2분)
-      
-      # 성능 모니터링
-      slowProcessingThresholdMs: 3000     # 느린 처리 경고 임계값 (3초)
+      chunkSize: 100
+      fixedDelayMs: 1000
+      initialDelayMs: 5000
+      timeoutSeconds: 10
+      baseBackoffMs: 5000
+      sendingTimeoutSeconds: 120
+      slowProcessingThresholdMs: 3000
 
   kafka:
     topics:

@@ -6,30 +6,25 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 /**
- * Kafka 이벤트 발행 전담 클래스
- *
- * 단일 책임: Kafka로 메시지를 안전하게 전송
+ * TransferEventAvroModel을 Kafka로 전송한다.
  */
 @Component
-class KafkaEventPublisher(
+class OutboxEventWriter(
     private val kafkaProducer: KafkaProducer<String, TransferEventAvroModel>
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
     /**
-     * 이벤트를 Kafka로 동기 전송
-     *
-     * @throws Exception 전송 실패 시 예외 발생
+     * 단일 아이템 쓰기
+     * 
+     * @throws Exception Kafka 전송 실패 시 예외
      */
-    fun publish(topicName: String, event: TransferEventAvroModel) {
+    fun write(topicName: String, event: TransferEventAvroModel) {
         try {
             kafkaProducer.sendSync(topicName, event)
-            log.debug("Successfully published event: eventId={}, type={}",
-                event.eventId, event.eventType)
+            log.debug("Successfully wrote event: eventId={}", event.eventId)
         } catch (e: Exception) {
-            log.error("Failed to publish event: eventId={}, error={}",
-                event.eventId, e.message, e)
-            // 재전송을 위해 예외를 다시 던짐
+            log.error("Failed to write event: eventId={}, error={}", event.eventId, e.message)
             throw e
         }
     }

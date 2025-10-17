@@ -1,66 +1,97 @@
 package io.github.hyungkishin.transentia.application
 
+import io.github.hyungkishin.transentia.application.mapper.OutboxEventMapper
 import io.github.hyungkishin.transentia.application.provided.TransactionRegister
 import io.github.hyungkishin.transentia.application.provided.command.TransferRequestCommand
 import io.github.hyungkishin.transentia.application.required.TransactionRepository
+import io.github.hyungkishin.transentia.application.required.TransferEventsOutboxRepository
 import io.github.hyungkishin.transentia.application.required.UserRepository
 import io.github.hyungkishin.transentia.application.required.command.TransferResponseCommand
 import io.github.hyungkishin.transentia.common.error.CommonError
 import io.github.hyungkishin.transentia.common.error.DomainException
+import io.github.hyungkishin.transentia.common.message.transfer.TransferCompleted
 import io.github.hyungkishin.transentia.common.snowflake.IdGenerator
 import io.github.hyungkishin.transentia.common.snowflake.SnowFlakeId
 import io.github.hyungkishin.transentia.container.model.transaction.Transaction
 import io.github.hyungkishin.transentia.container.validator.transfer.TransferValidator
+import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
 
 @Service
 class TransactionService(
     private val transactionRepository: TransactionRepository,
     private val userRepository: UserRepository,
-    private val transactionHistoryService: TransactionHistoryService,
+    private val outboxRepository: TransferEventsOutboxRepository,
+    private val outboxEventMapper: OutboxEventMapper,
     private val idGenerator: IdGenerator,
     private val eventPublisher: ApplicationEventPublisher,
 ) : TransactionRegister {
 
+    private val log = LoggerFactory.getLogger(javaClass)
+
     @Transactional
     override fun createTransfer(command: TransferRequestCommand): TransferResponseCommand {
-        val sender = userRepository.findById(command.senderId) ?: throw DomainException(
-            CommonError.NotFound("account_balance", command.senderId.toString()),
-            "송신자 정보를 찾을 수 없습니다. senderId=${command.senderId}"
-        )
+        val (sender, receiver) = loadUsers(command)
+        val amount = command.amount()
 
-        val receiver = userRepository.findByAccountNumber(command.receiverAccountNumber) ?: throw DomainException(
-            CommonError.NotFound("account_balance", command.receiverAccountNumber.toString()),
-            "수신자 계좌 정보를 찾을 수 없습니다. snowFlakeId=${command.receiverAccountNumber}"
-        )
-
-        // TODO: - 테스트의 용이성과 확장성 / 재사용성 검증하기
-        TransferValidator.validate(sender, receiver, command.amount())
+        TransferValidator.validate(sender, receiver, amount)
 
         val transaction = Transaction.of(
             SnowFlakeId(idGenerator.nextId()),
             sender.id,
             receiver.id,
-            command.amount()
+            amount
         )
 
-        sender.accountBalance.withdrawOrThrow(command.amount())
-        receiver.accountBalance.deposit(command.amount())
-
+        sender.accountBalance.withdrawOrThrow(amount)
+        receiver.accountBalance.deposit(amount)
         userRepository.save(sender)
         userRepository.save(receiver)
 
-        val completeEvent = transaction.complete()
         val savedTransaction = transactionRepository.save(transaction)
 
-        // TODO: outbox ( kafka publish ) + relay 서버를 fadeout 하고, CDC 방식으로 전환.
+        val completeEvent = transaction.complete()
+
+        // outbox 먼저 저장
+        saveToOutbox(completeEvent, savedTransaction.id.value)
+
+        // 이벤트 발행 (커밋 후 별도 스레드에서 Kafka 전송)
         eventPublisher.publishEvent(completeEvent)
 
         return TransferResponseCommand.from(savedTransaction)
     }
 
+    private fun saveToOutbox(event: TransferCompleted, transactionId: Long) {
+        try {
+            val outboxEvent = outboxEventMapper.toOutboxEvent(event, transactionId)
+            outboxRepository.save(outboxEvent, Instant.now())
+        } catch (e: Exception) {
+            throw DomainException(
+                CommonError.Conflict("outbox_save_failed"),
+                "송금 처리 중 시스템 오류가 발생했습니다.",
+                e
+            )
+        }
+    }
+
+    private fun loadUsers(command: TransferRequestCommand) =
+        Pair(
+            userRepository.findById(command.senderId)
+                ?: throw DomainException(
+                    CommonError.NotFound("account_balance", command.senderId.toString()),
+                    "송신자 정보를 찾을 수 없습니다."
+                ),
+            userRepository.findByAccountNumber(command.receiverAccountNumber)
+                ?: throw DomainException(
+                    CommonError.NotFound("account_balance", command.receiverAccountNumber),
+                    "수신자 계좌 정보를 찾을 수 없습니다."
+                )
+        )
+
+    @Transactional(readOnly = true)
     override fun findTransfer(transactionId: Long): TransferResponseCommand {
         val tx = transactionRepository.findById(transactionId)
             ?: throw DomainException(
@@ -69,5 +100,4 @@ class TransactionService(
             )
         return TransferResponseCommand.from(tx)
     }
-
 }
