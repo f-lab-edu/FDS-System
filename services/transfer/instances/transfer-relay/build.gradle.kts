@@ -17,7 +17,7 @@ dependencies {
     // 테스트 의존성 추가
     testImplementation(project(":transfer-domain"))  // TransferEvent 사용을 위해 TODO application 으로 eventType 분리 개선
     testImplementation("org.springframework.boot:spring-boot-starter-jdbc")
-    testImplementation("org.mockito.kotlin:mockito-kotlin:4.1.0")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:6.1.0")
     testImplementation("org.jetbrains.kotlin:kotlin-test")
 }
 
