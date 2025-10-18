@@ -24,7 +24,6 @@ class OutboxEventProcessor(
                 if (payload.status == "COMPLETED") TransferEventType.TRANSFER_COMPLETED
                 else TransferEventType.TRANSFER_FAILED
             )
-            .setAggregateId(row.aggregateId)
             .setTransactionId(payload.transactionId)
             .setSenderId(payload.senderId)
             .setReceiverId(payload.receiverUserId)

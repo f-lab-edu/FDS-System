@@ -28,9 +28,8 @@ class KafkaTransferEventPublisher(
     override fun publish(event: TransferCompleted) {
         try {
             val avroModel = TransferEventAvroModel.newBuilder()
-                .setEventId(event.eventId)
+                .setEventId(event.transactionId)
                 .setEventType(TransferEventType.TRANSFER_COMPLETED)
-                .setAggregateId(event.transactionId.toString())
                 .setTransactionId(event.transactionId)
                 .setSenderId(event.senderUserId)
                 .setReceiverId(event.receiverUserId)
@@ -52,12 +51,12 @@ class KafkaTransferEventPublisher(
                 .build()
 
             kafkaProducer.sendSync(topicName, avroModel)
-            
-            outboxRepository.markAsPublished(listOf(event.eventId), Instant.now())
-            log.debug("Kafka 전송 및 outbox PUBLISHED 완료: eventId={}", event.eventId)
-            
+
+            outboxRepository.markAsPublished(listOf(event.transactionId), Instant.now())
+            log.debug("Kafka 전송 및 outbox PUBLISHED 완료: eventId={}", event.transactionId)
+
         } catch (e: Exception) {
-            log.warn("Kafka 전송 실패 (relay 재시도): eventId={}, error={}", event.eventId, e.message)
+            log.warn("Kafka 전송 실패 (relay 재시도): eventId={}, error={}", event.transactionId, e.message)
         }
     }
 }

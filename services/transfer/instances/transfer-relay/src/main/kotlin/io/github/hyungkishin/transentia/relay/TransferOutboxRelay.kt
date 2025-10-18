@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit
 /**
  * Outbox 이벤트를 Kafka로 전송하는 Relay
  *
- * Spring Batch Multi-threaded Step 패턴:
+ * Spring Batch Multi-threaded Step 패턴 적용
  * - ItemReader: Thread-safe하게 이벤트 읽기
  * - ItemProcessor: 데이터 변환
  * - ItemWriter: Kafka 전송

@@ -14,7 +14,6 @@ import io.github.hyungkishin.transentia.common.snowflake.IdGenerator
 import io.github.hyungkishin.transentia.common.snowflake.SnowFlakeId
 import io.github.hyungkishin.transentia.container.model.transaction.Transaction
 import io.github.hyungkishin.transentia.container.validator.transfer.TransferValidator
-import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -30,13 +29,12 @@ class TransactionService(
     private val eventPublisher: ApplicationEventPublisher,
 ) : TransactionRegister {
 
-    private val log = LoggerFactory.getLogger(javaClass)
-
     @Transactional
     override fun createTransfer(command: TransferRequestCommand): TransferResponseCommand {
         val (sender, receiver) = loadUsers(command)
         val amount = command.amount()
 
+        // LocalRule ( 송금자/수신자 블랙리스트, 일일 송금액) 적용
         TransferValidator.validate(sender, receiver, amount)
 
         val transaction = Transaction.of(
@@ -56,17 +54,17 @@ class TransactionService(
         val completeEvent = transaction.complete()
 
         // outbox 먼저 저장
-        saveToOutbox(completeEvent, savedTransaction.id.value)
+        saveToOutbox(completeEvent)
 
-        // 이벤트 발행 (커밋 후 별도 스레드에서 Kafka 전송)
-        eventPublisher.publishEvent(completeEvent)
+        // 이벤트 발행 (커밋 후 별도 스레드에서 Kafka 전송) - @see TransferOutboxEventHandler
+//        eventPublisher.publishEvent(completeEvent)
 
         return TransferResponseCommand.from(savedTransaction)
     }
 
-    private fun saveToOutbox(event: TransferCompleted, transactionId: Long) {
+    private fun saveToOutbox(event: TransferCompleted) {
         try {
-            val outboxEvent = outboxEventMapper.toOutboxEvent(event, transactionId)
+            val outboxEvent = outboxEventMapper.toOutboxEvent(event)
             outboxRepository.save(outboxEvent, Instant.now())
         } catch (e: Exception) {
             throw DomainException(
@@ -100,4 +98,5 @@ class TransactionService(
             )
         return TransferResponseCommand.from(tx)
     }
+
 }

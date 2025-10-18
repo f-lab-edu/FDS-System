@@ -19,11 +19,15 @@ class TransferEventsOutboxJdbcRepository(
 
         val sql = """
             INSERT INTO transfer_events(
-              event_id, event_version, aggregate_type, aggregate_id, event_type,
-              payload, headers, status, attempt_count, created_at, updated_at, next_retry_at
-            ) VALUES (:eventId, 1, :aggType, :aggId, :eventType,
-                     CAST(:payload AS JSONB), CAST(:headers AS JSONB),
-                     'PENDING', 0, :now, :now, :now)
+              event_id, event_version, aggregate_type, event_type,
+              payload, headers, status, attempt_count,
+              created_at, updated_at, next_retry_at
+            ) VALUES (
+              :eventId, 1, :aggType, :eventType,
+              CAST(:payload AS JSONB), CAST(:headers AS JSONB),
+              'PENDING', 0, 
+              :now, :now, :now
+            )
             ON CONFLICT (event_id) DO NOTHING
         """.trimIndent()
 
@@ -31,7 +35,6 @@ class TransferEventsOutboxJdbcRepository(
             sql, mapOf(
                 "eventId" to row.eventId,
                 "aggType" to row.aggregateType,
-                "aggId" to row.aggregateId,
                 "eventType" to row.eventType,
                 "payload" to row.payload,
                 "headers" to row.headers,
@@ -44,7 +47,7 @@ class TransferEventsOutboxJdbcRepository(
      * 처리 대기 중인 이벤트를 조회하고 SENDING 상태로 변경
      *
      * SKIP LOCKED로 동시성 제어
-     * 우선순위: PENDING > SENDING(Stuck) > FAILED
+     * 우선순위: PENDING > SENDING(Stuck)
      */
     override fun claimBatch(
         limit: Int,
@@ -52,49 +55,46 @@ class TransferEventsOutboxJdbcRepository(
         sendingTimeoutSeconds: Long
     ): List<ClaimedRow> {
         val stuckThreshold = Timestamp.from(now.minusSeconds(sendingTimeoutSeconds))
+        val gracePeriod = Timestamp.from(now.minusSeconds(30))
         val currentTime = Timestamp.from(now)
 
         val sql = """
-          WITH grabbed AS (
+        WITH grabbed AS (
             SELECT event_id
             FROM transfer_events
             WHERE (
-              status IN ('PENDING', 'FAILED')
-              OR (status = 'SENDING' AND updated_at < :stuckThreshold)
+                -- PENDING이면서 Main이 처리할 시간(30초) 지남
+                (status = 'PENDING' AND created_at < :gracePeriod)
+                -- 또는 SENDING인데 타임아웃 (Worker 죽은 경우)
+                OR (status = 'SENDING' AND updated_at < :stuckThreshold)
             )
-              AND next_retry_at <= :now
-              AND attempt_count < 5
-            ORDER BY 
-              CASE 
-                WHEN status = 'PENDING' THEN 0 
-                WHEN status = 'SENDING' THEN 1
-                ELSE 2 
-              END,
-              created_at
+            AND attempt_count < 5
+            ORDER BY created_at
             FOR UPDATE SKIP LOCKED
             LIMIT :limit
-          )
-          UPDATE transfer_events t
-             SET status = 'SENDING',
-                 attempt_count = CASE 
-                   WHEN t.status = 'SENDING' THEN t.attempt_count
-                   ELSE t.attempt_count + 1 
-                 END,
-                 updated_at = :now
-            FROM grabbed g
-           WHERE t.event_id = g.event_id
-          RETURNING t.event_id, t.aggregate_id, t.payload::text AS payload, 
-                   t.headers::text AS headers, t.attempt_count
-        """.trimIndent()
+        )
+        UPDATE transfer_events t
+        SET status = 'SENDING',
+            attempt_count = CASE 
+                WHEN t.status = 'SENDING' THEN t.attempt_count
+                ELSE t.attempt_count + 1 
+            END,
+            updated_at = :now
+        FROM grabbed g
+        WHERE t.event_id = g.event_id
+        RETURNING t.event_id,
+                  t.payload::text AS payload,
+                  t.headers::text AS headers,
+                  t.attempt_count
+    """.trimIndent()
 
         return jdbc.query(
-            sql,
-            mapOf(
+            sql, mapOf(
                 "limit" to limit,
                 "now" to currentTime,
-                "stuckThreshold" to stuckThreshold
-            ),
-            claimedRowMapper
+                "stuckThreshold" to stuckThreshold,
+                "gracePeriod" to gracePeriod
+            ), claimedRowMapper
         )
     }
 
@@ -135,16 +135,16 @@ class TransferEventsOutboxJdbcRepository(
         val nextRetry = Timestamp.from(now.plusMillis(backoffMillis))
 
         val sql = """
-        UPDATE transfer_events
-        SET status = CASE 
-              WHEN attempt_count >= 5 THEN 'DEAD_LETTER'::transfer_outbox_status
-              ELSE 'FAILED'::transfer_outbox_status
-            END,
-            last_error = :errorMessage,
-            updated_at = :now,
-            next_retry_at = :nextRetry
-        WHERE event_id = :eventId
-    """.trimIndent()
+            UPDATE transfer_events
+            SET status = CASE 
+                  WHEN attempt_count >= 5 THEN 'DEAD_LETTER'::transfer_outbox_status
+                  ELSE 'SENDING'::transfer_outbox_status
+                END,
+                error_message = :errorMessage,
+                updated_at = :now,
+                next_retry_at = :nextRetry
+            WHERE event_id = :eventId
+        """.trimIndent()
 
         jdbc.update(
             sql, mapOf(
@@ -154,12 +154,12 @@ class TransferEventsOutboxJdbcRepository(
                 "nextRetry" to nextRetry
             )
         )
+
     }
 
     private val claimedRowMapper = RowMapper { rs, _ ->
         ClaimedRow(
             eventId = rs.getLong("event_id"),
-            aggregateId = rs.getString("aggregate_id"),
             payload = rs.getString("payload"),
             headers = rs.getString("headers"),
             attemptCount = rs.getInt("attempt_count")

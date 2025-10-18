@@ -7,13 +7,6 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.time.Instant
 
-/**
- * Thread-safe ItemReader (Spring Batch Multi-threaded Step)
- * 
- * 배치 + 커서 방식:
- * - DB에서 한번에 N건 조회 (Batch)
- * - 메모리에서 순차 반환 (Cursor)
- */
 @Component
 class OutboxItemReader(
     private val repository: TransferEventsOutboxRepository,

@@ -14,11 +14,6 @@ class OutboxEventWriter(
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    /**
-     * 단일 아이템 쓰기
-     * 
-     * @throws Exception Kafka 전송 실패 시 예외
-     */
     fun write(topicName: String, event: TransferEventAvroModel) {
         try {
             kafkaProducer.sendSync(topicName, event)

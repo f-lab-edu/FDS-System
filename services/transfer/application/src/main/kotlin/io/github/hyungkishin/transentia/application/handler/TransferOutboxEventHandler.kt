@@ -17,7 +17,7 @@ class TransferOutboxEventHandler(
     @Async("outboxEventExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     fun handle(event: TransferCompleted) {
-        log.debug("비동기 Kafka 전송 시도: transactionId={}, eventId={}", event.transactionId, event.eventId)
+        log.debug("비동기 Kafka 전송 시도: transactionId={}", event.transactionId)
 
         eventPublisher.publish(event)
     }
