@@ -57,7 +57,7 @@ class TransactionService(
         saveToOutbox(completeEvent)
 
         // 이벤트 발행 (커밋 후 별도 스레드에서 Kafka 전송) - @see TransferOutboxEventHandler
-//        eventPublisher.publishEvent(completeEvent)
+        eventPublisher.publishEvent(completeEvent)
 
         return TransferResponseCommand.from(savedTransaction)
     }

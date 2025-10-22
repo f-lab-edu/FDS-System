@@ -6,6 +6,8 @@ import io.github.hyungkishin.transentia.relay.config.OutboxRelayConfig
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.time.Instant
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.locks.ReentrantLock
 
 @Component
 class OutboxItemReader(
@@ -13,24 +15,47 @@ class OutboxItemReader(
     private val config: OutboxRelayConfig
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
+    private val lock = ReentrantLock(true)
     
     private var items: List<ClaimedRow> = emptyList()
     private var currentIndex: Int = 0
 
-    @Synchronized
     fun read(): ClaimedRow? {
-        // 메모리에 읽지 않은 아이템이 남아있으면 반환한다.
-        if (currentIndex < items.size) {
-            return items[currentIndex++]
+        lock.lock()
+        try {
+            if (currentIndex < items.size) {
+                return items[currentIndex++]
+            }
+        } finally {
+            lock.unlock()
         }
         
-        fetchItems()
-        
-        if (items.isEmpty()) {
+        return fetchAndRead()
+    }
+
+    private fun fetchAndRead(): ClaimedRow? {
+        val acquired = lock.tryLock(5, TimeUnit.SECONDS)
+        if (!acquired) {
+            log.warn("DB 조회 락 획득 실패 (다른 워커가 이미 조회 중)")
             return null
         }
         
-        return items[currentIndex++]
+        try {
+            if (currentIndex < items.size) {
+                return items[currentIndex++]
+            }
+            
+            fetchItems()
+            
+            if (items.isEmpty()) {
+                return null
+            }
+            
+            return items[currentIndex++]
+            
+        } finally {
+            lock.unlock()
+        }
     }
 
     private fun fetchItems() {
@@ -42,17 +67,24 @@ class OutboxItemReader(
             )
             currentIndex = 0
             
-            log.debug("Fetched {} items from outbox", items.size)
+            if (items.isNotEmpty()) {
+                log.debug("DB 조회: {} 건", items.size)
+            }
             
         } catch (e: Exception) {
-            log.error("Failed to fetch items from outbox", e)
+            log.error("DB 조회 실패", e)
             items = emptyList()
             currentIndex = 0
         }
     }
 
     fun reset() {
-        items = emptyList()
-        currentIndex = 0
+        lock.lock()
+        try {
+            items = emptyList()
+            currentIndex = 0
+        } finally {
+            lock.unlock()
+        }
     }
 }

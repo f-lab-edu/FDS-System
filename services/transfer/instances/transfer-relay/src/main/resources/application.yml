@@ -30,11 +30,11 @@ kafka-producer-config:
   valueSerializer: io.confluent.kafka.serializers.KafkaAvroSerializer
   compressionType: lz4
   acks: "1"
-  batchSize: 65536        # 64KB로 증가
+  batchSize: 65536
   batchSizeBoostFactor: 1
-  lingerMs: 5             # 배치 대기 시간
-  requestTimeoutMs: 1000  # 1초로 단축
-  retryCount: 0           # 재시도 없음 (빠른 실패)
+  lingerMs: 5
+  requestTimeoutMs: 1000
+  retryCount: 0
 
 kafka-consumer-config:
   key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
@@ -54,16 +54,18 @@ kafka-consumer-config:
   max-partition-fetch-bytes-boost-factor: 1
   poll-timeout-ms: 150
 
+# Phase 1: 단일 인스턴스 + 멀티스레드 설정
 app:
   outbox:
     relay:
-      chunkSize: 100
-      fixedDelayMs: 1000
+      chunkSize: 500
+      threadPoolSize: 3
+      fixedDelayMs: 2000
       initialDelayMs: 5000
-      timeoutSeconds: 10
+      timeoutSeconds: 30
+      maxAttempts: 5
       baseBackoffMs: 5000
-      sendingTimeoutSeconds: 120
-      slowProcessingThresholdMs: 3000
+      sendingTimeoutSeconds: 300
 
   kafka:
     topics:

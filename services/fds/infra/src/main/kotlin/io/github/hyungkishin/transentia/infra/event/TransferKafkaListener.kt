@@ -46,8 +46,14 @@ class TransferKafkaListener(
                     avroMessage.eventId, avroMessage.amount, avroMessage.status
                 )
 
+                // threadPool 배경 -> 현대
+                // GC -> 자바에서 / redis | <- CS
+
+                // batch -> SCDF
+
                 val domainEvent = transferEventMapper.toDomain(avroMessage)
 
+                // offset commit 을 할 수 있나 ?
                 val riskLog = analyzeTransferService.analyze(domainEvent)
 
                 log.info(

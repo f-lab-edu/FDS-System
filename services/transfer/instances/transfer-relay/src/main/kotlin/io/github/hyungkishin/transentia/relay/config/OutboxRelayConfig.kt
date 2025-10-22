@@ -4,31 +4,33 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 
 /**
  * Outbox Relay 설정
+ * 
+ * Phase 1: 단일 인스턴스 + 멀티스레드
  */
 @ConfigurationProperties(prefix = "app.outbox.relay")
 data class OutboxRelayConfig(
 
     /** DB 조회 배치 크기 */
-    val chunkSize: Int = 100,
+    val chunkSize: Int = 500,
 
-    /** 스케줄링 간격 (ms) */
-    val fixedDelayMs: Long = 1000,
-
-    /** 첫 실행 지연 시간 (ms) */
-    val initialDelayMs: Long = 5000,
-
-    /** Worker 스레드 개수 */
-    val threadPoolSize: Int = Runtime.getRuntime().availableProcessors() * 2,
+    /** 
+     * Worker 스레드 개수
+     * 
+     * 결정 기준
+     * - 처리 속도 목표
+     * - 부하 테스트로 최종 결정
+     */
+    val threadPoolSize: Int = 3,
 
     /** Worker 타임아웃 (초) */
-    val timeoutSeconds: Long = 5,
+    val timeoutSeconds: Long = 30,
+
+    /** 최대 재시도 횟수 (초과 시 DLQ) */
+    val maxAttempts: Int = 5,
 
     /** 첫 재시도 백오프 시간 (ms) - 지수 증가 */
     val baseBackoffMs: Long = 5000,
 
-    /** Stuck SENDING 판단 기준 (초) */
-    val sendingTimeoutSeconds: Long = 120,
-
-    /** 느린 처리 경고 임계값 (ms) */
-    val slowProcessingThresholdMs: Long = 3000
+    /** 사용 안 함 (호환성 유지) */
+    val sendingTimeoutSeconds: Long = 300
 )
