@@ -2,14 +2,20 @@ spring:
   application:
     name: transfer-relay
 
+  batch:
+    jdbc:
+      initialize-schema: always
+    job:
+      enabled: false
+
   datasource:
     url: jdbc:postgresql://localhost:5432/transfer
     username: postgres
     password: pass1234
     driver-class-name: org.postgresql.Driver
     hikari:
-      maximum-pool-size: 10
-      minimum-idle: 3
+      maximum-pool-size: 20
+      minimum-idle: 10
       connection-timeout: 3000
       idle-timeout: 600000
       max-lifetime: 1800000
@@ -30,49 +36,23 @@ kafka-producer-config:
   valueSerializer: io.confluent.kafka.serializers.KafkaAvroSerializer
   compressionType: lz4
   acks: "1"
-  batchSize: 65536        # 64KB로 증가
+  batchSize: 65536
   batchSizeBoostFactor: 1
-  lingerMs: 5             # 배치 대기 시간
-  requestTimeoutMs: 1000  # 1초로 단축
-  retryCount: 0           # 재시도 없음 (빠른 실패)
-
-kafka-consumer-config:
-  key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-  value-deserializer: io.confluent.kafka.serializers.KafkaAvroDeserializer
-  consumer-group-id: fds-consumer-group
-  auto-offset-reset: earliest
-  specific-avro-reader-key: specific.avro.reader
-  specific-avro-reader: true
-  batch-listener: true
-  auto-startup: true
-  concurrency-level: 8
-  session-timeout-ms: 10000
-  heartbeat-interval-ms: 3000
-  max-poll-interval-ms: 300000
-  max-poll-records: 500
-  max-partition-fetch-bytes-default: 1048576
-  max-partition-fetch-bytes-boost-factor: 1
-  poll-timeout-ms: 150
+  lingerMs: 5
+  requestTimeoutMs: 1000
+  retryCount: 0
 
 app:
   outbox:
     relay:
-      # 배치 처리 설정
-      batchSize: 500                      # 한 번에 처리할 최대 이벤트 수
-      fixedDelayMs: 1000                  # 배치 처리 간격 (1초)
-      initialDelayMs: 5000                # 애플리케이션 시작 후 첫 실행 대기 시간 (5초)
-      
-      # 멀티 스레드 설정
-      threadPoolSize: 8                   # 멀티 스레드 풀 크기 (CPU 코어 수 × 2 권장)
-      timeoutSeconds: 10                  # Kafka 전송 타임아웃 (초)
-      
-      # 재시도 정책
-      baseBackoffMs: 5000                 # 재시도 기본 백오프 시간 (5초)
-      maxBackoffMs: 600000                # 재시도 최대 백오프 시간 (10분)
-      stuckThresholdSeconds: 120          # Stuck SENDING 감지 임계값 (2분)
-      
-      # 성능 모니터링
-      slowProcessingThresholdMs: 3000     # 느린 처리 경고 임계값 (3초)
+      chunkSize: 1000
+      threadPoolSize: 8
+      fixedDelayMs: 1000
+      initialDelayMs: 5000
+      timeoutSeconds: 10
+      maxAttempts: 5
+      baseBackoffMs: 5000
+      sendingTimeoutSeconds: 300
 
   kafka:
     topics:

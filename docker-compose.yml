@@ -82,8 +82,8 @@ services:
     command: >
       bash -c "
       /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic transfer-complete-events --partitions 8 --replication-factor 1 &&
-      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic transfer-transaction-events --partitions 3 --replication-factor 1 &&
-      echo 'topics created'
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic transfer-transaction-events --partitions 8 --replication-factor 1 &&
+      echo 'Topics created: transfer-complete-events (8 partitions), transfer-transaction-events (8 partitions) - for 2000 TPS target'
       "
     restart: "no"
 
