@@ -11,11 +11,10 @@ import java.util.*
 class OutboxEventMapper(
     private val objectMapper: ObjectMapper
 ) {
-    fun toOutboxEvent(event: TransferCompleted, transactionId: Long): TransferEvent {
+    fun toOutboxEvent(event: TransferCompleted): TransferEvent {
         return TransferEvent(
-            eventId = event.eventId,
+            eventId = event.transactionId,
             aggregateType = "Transaction",
-            aggregateId = transactionId.toString(),
             eventType = "TRANSFER_COMPLETED",
             payload = objectMapper.writeValueAsString(
                 mapOf(

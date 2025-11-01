@@ -19,11 +19,6 @@
       "doc": "Type of transfer event"
     },
     {
-      "name": "aggregateId",
-      "type": "string",
-      "doc": "Transaction aggregate ID as string"
-    },
-    {
       "name": "transactionId",
       "type": "long",
       "doc": "Transaction snowflake ID"

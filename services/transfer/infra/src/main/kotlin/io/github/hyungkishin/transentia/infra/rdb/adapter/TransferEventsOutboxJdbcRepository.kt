@@ -19,19 +19,24 @@ class TransferEventsOutboxJdbcRepository(
 
         val sql = """
             INSERT INTO transfer_events(
-              event_id, event_version, aggregate_type, aggregate_id, event_type,
-              payload, headers, status, attempt_count, created_at, updated_at, next_retry_at
-            ) VALUES (:eventId, 1, :aggType, :aggId, :eventType,
-                     CAST(:payload AS JSONB), CAST(:headers AS JSONB),
-                     'PENDING', 0, :now, :now, :now)
-            ON CONFLICT (event_id) DO NOTHING
+              event_id, event_version, aggregate_type, event_type,
+              payload, headers, status, attempt_count,
+              created_at, updated_at, next_retry_at
+            ) VALUES (
+              :eventId, 1, :aggType, :eventType,
+              CAST(:payload AS JSONB), CAST(:headers AS JSONB),
+              'PENDING', 0, 
+              :now, :now, :now
+            )
+            ON CONFLICT (event_id) DO UPDATE
+            SET status = EXCLUDED.status,
+                updated_at = EXCLUDED.updated_at
         """.trimIndent()
 
         jdbc.update(
             sql, mapOf(
                 "eventId" to row.eventId,
                 "aggType" to row.aggregateType,
-                "aggId" to row.aggregateId,
                 "eventType" to row.eventType,
                 "payload" to row.payload,
                 "headers" to row.headers,
@@ -41,65 +46,49 @@ class TransferEventsOutboxJdbcRepository(
     }
 
     /**
-     * 처리 대기 중인 이벤트를 조회하고 SENDING 상태로 변경
-     *
-     * SKIP LOCKED로 동시성 제어
-     * 우선순위: PENDING > SENDING(Stuck) > FAILED
+     * Claim + Read (원자적 처리)
+     * 
+     * 개선사항:
+     * 1. FOR UPDATE SKIP LOCKED로 경합 방지
+     * 2. 재시도 대상 포함 (next_retry_at 지난 것)
+     * 3. 최대 재시도 횟수 체크 (attempt_count < 5)
      */
     override fun claimBatch(
         limit: Int,
         now: Instant,
         sendingTimeoutSeconds: Long
     ): List<ClaimedRow> {
-        val stuckThreshold = Timestamp.from(now.minusSeconds(sendingTimeoutSeconds))
         val currentTime = Timestamp.from(now)
 
         val sql = """
-          WITH grabbed AS (
-            SELECT event_id
+            SELECT 
+                event_id,
+                payload::text AS payload,
+                headers::text AS headers,
+                attempt_count
             FROM transfer_events
-            WHERE (
-              status IN ('PENDING', 'FAILED')
-              OR (status = 'SENDING' AND updated_at < :stuckThreshold)
-            )
-              AND next_retry_at <= :now
-              AND attempt_count < 5
-            ORDER BY 
-              CASE 
-                WHEN status = 'PENDING' THEN 0 
-                WHEN status = 'SENDING' THEN 1
-                ELSE 2 
-              END,
-              created_at
+            WHERE status = 'PENDING'
+              AND (next_retry_at IS NULL OR next_retry_at <= :now)
+              AND attempt_count < :maxAttempts
+            ORDER BY next_retry_at NULLS FIRST, created_at
             FOR UPDATE SKIP LOCKED
             LIMIT :limit
-          )
-          UPDATE transfer_events t
-             SET status = 'SENDING',
-                 attempt_count = CASE 
-                   WHEN t.status = 'SENDING' THEN t.attempt_count
-                   ELSE t.attempt_count + 1 
-                 END,
-                 updated_at = :now
-            FROM grabbed g
-           WHERE t.event_id = g.event_id
-          RETURNING t.event_id, t.aggregate_id, t.payload::text AS payload, 
-                   t.headers::text AS headers, t.attempt_count
         """.trimIndent()
 
         return jdbc.query(
-            sql,
-            mapOf(
+            sql, mapOf(
                 "limit" to limit,
                 "now" to currentTime,
-                "stuckThreshold" to stuckThreshold
-            ),
-            claimedRowMapper
+                "maxAttempts" to 5
+            ), claimedRowMapper
         )
     }
 
     /**
-     * Kafka 발행 성공한 이벤트를 PUBLISHED로 변경
+     * 발행 완료 처리
+     * 
+     * 개선사항:
+     * - status 체크 제거 (PENDING에서 바로 PUBLISHED로)
      */
     override fun markAsPublished(
         ids: List<Long>,
@@ -125,33 +114,57 @@ class TransferEventsOutboxJdbcRepository(
         )
     }
 
-    override fun markFailedWithBackoff(
-        id: Long,
-        cause: String?,
-        backoffMillis: Long,
+    /**
+     * 재시도 예약
+     * 
+     * - status는 PENDING 유지
+     * - attempt_count 증가
+     * - next_retry_at 설정
+     */
+    override fun markForRetry(
+        eventId: Long,
+        attemptCount: Int,
+        nextRetryAt: Instant,
+        error: String?,
         now: Instant
     ) {
-        val currentTime = Timestamp.from(now)
-        val nextRetry = Timestamp.from(now.plusMillis(backoffMillis))
-
         val sql = """
-        UPDATE transfer_events
-        SET status = CASE 
-              WHEN attempt_count >= 5 THEN 'DEAD_LETTER'::transfer_outbox_status
-              ELSE 'FAILED'::transfer_outbox_status
-            END,
-            last_error = :errorMessage,
-            updated_at = :now,
-            next_retry_at = :nextRetry
-        WHERE event_id = :eventId
-    """.trimIndent()
+            UPDATE transfer_events
+            SET attempt_count = :attemptCount,
+                next_retry_at = :nextRetryAt,
+                error_message = :error,
+                updated_at = :now
+            WHERE event_id = :eventId
+        """.trimIndent()
 
         jdbc.update(
             sql, mapOf(
-                "eventId" to id,
-                "errorMessage" to (cause ?: "UNKNOWN"),
-                "now" to currentTime,
-                "nextRetry" to nextRetry
+                "eventId" to eventId,
+                "attemptCount" to attemptCount,
+                "nextRetryAt" to Timestamp.from(nextRetryAt),
+                "error" to error,
+                "now" to Timestamp.from(now)
+            )
+        )
+    }
+
+    /**
+     * DLQ 이동
+     */
+    override fun markAsDeadLetter(eventId: Long, error: String?, now: Instant) {
+        val sql = """
+            UPDATE transfer_events
+            SET status = 'DEAD_LETTER',
+                error_message = :error,
+                updated_at = :now
+            WHERE event_id = :eventId
+        """.trimIndent()
+
+        jdbc.update(
+            sql, mapOf(
+                "eventId" to eventId,
+                "error" to error,
+                "now" to Timestamp.from(now)
             )
         )
     }
@@ -159,7 +172,6 @@ class TransferEventsOutboxJdbcRepository(
     private val claimedRowMapper = RowMapper { rs, _ ->
         ClaimedRow(
             eventId = rs.getLong("event_id"),
-            aggregateId = rs.getString("aggregate_id"),
             payload = rs.getString("payload"),
             headers = rs.getString("headers"),
             attemptCount = rs.getInt("attempt_count")

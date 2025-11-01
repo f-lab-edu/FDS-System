@@ -9,12 +9,25 @@ spring:
     username: postgres
     password: pass1234
     driver-class-name: org.postgresql.Driver
+    # HikariCP 최적화
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 10
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
 
   jpa:
     open-in-view: false
     hibernate:
       ddl-auto: none
-    show-sql: true
+    show-sql: false
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
 
   flyway:
     enabled: false
@@ -23,18 +36,17 @@ spring:
 
 logging:
   level:
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.hibernate.SQL: INFO
+    org.hibernate.type.descriptor.sql.BasicBinder: INFO
     org.springframework.kafka: INFO
-    io.github.hyungkishin.transentia: DEBUG
+    io.github.hyungkishin.transentia: INFO
 
 kafka-config:
   bootstrap-servers: host.docker.internal:9094
   schema-registry-url-key: schema.registry.url
   schema-registry-url: http://localhost:8085
-  num-of-partitions: 8
+  num-of-partitions: 3
   replication-factor: 1
-
 kafka-consumer-config:
   key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
   value-deserializer: io.confluent.kafka.serializers.KafkaAvroDeserializer
@@ -42,16 +54,17 @@ kafka-consumer-config:
   auto-offset-reset: earliest
   specific-avro-reader-key: specific.avro.reader
   specific-avro-reader: true
-  batch-listener: true
+  
+  batch-listener: false
   auto-startup: true
-  concurrency-level: 2 # 2000 TPS 는 4
+  concurrency-level: 3
+  max-poll-records: 100
+  max-partition-fetch-bytes-default: 1048576
+  max-partition-fetch-bytes-boost-factor: 1
+  poll-timeout-ms: 1000
   session-timeout-ms: 10000
   heartbeat-interval-ms: 3000
   max-poll-interval-ms: 300000
-  max-poll-records: 500
-  max-partition-fetch-bytes-default: 1048576
-  max-partition-fetch-bytes-boost-factor: 1
-  poll-timeout-ms: 500
 
 app:
   transfer:
