@@ -25,8 +25,8 @@ services:
     networks:
       default:
         aliases:
-          - transfer-kafka   # ✅ 내부 DNS에 transfer-kafka 등록
-          - kafka            # ✅ kafka 이름도 같이 등록
+          - transfer-kafka   # 내부 DNS에 transfer-kafka 등록
+          - kafka            # kafka 이름도 같이 등록
     restart: unless-stopped                           # 명시적으로 중지하기 전까지 자동 재시작
     ports:
       - "9094:9094"                                   # 호스트에서 접속할 외부용 리스너(EXTERNAL) 포트로 9094 사용 (내부 9092와 구분)
@@ -81,9 +81,16 @@ services:
         condition: service_healthy
     command: >
       bash -c "
-      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic transfer-complete-events --partitions 8 --replication-factor 1 &&
-      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic transfer-transaction-events --partitions 8 --replication-factor 1 &&
-      echo 'Topics created: transfer-complete-events (8 partitions), transfer-transaction-events (8 partitions) - for 2000 TPS target'
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic transfer-complete-events --partitions 3 --replication-factor 1 &&
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic transfer-transaction-events --partitions 3 --replication-factor 1 &&
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic fds-analysis-results --partitions 3 --replication-factor 1 &&
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic suspicious-patterns --partitions 3 --replication-factor 1 &&
+      echo 'Topics created:' &&
+      echo '  - transfer-complete-events (3 partitions)' &&
+      echo '  - transfer-transaction-events (3 partitions)' &&
+      echo '  - fds-analysis-results (3 partitions) [Spring Cloud Stream output]' &&
+      echo '  - suspicious-patterns (3 partitions) [Spring Cloud Stream output]' &&
+      echo 'Optimized for 2000 TPS targets'
       "
     restart: "no"
 
@@ -113,106 +120,6 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
-
-  # =============================================================================
-  # Relay 서버 3대 (파티셔닝)
-  # =============================================================================
-  # 
-  # 파티셔닝 전략:
-  #   - 각 인스턴스가 MOD(event_id, 3) = {0, 1, 2} 조건으로 서로 다른 이벤트 처리
-  #   - 락 경합 감소, 부하 분산
-  # 
-  # 확장 시나리오:
-  #   평시 (200 TPS): 3대 운영 (각 67 TPS, 부하 14%)
-  #   피크 (2000 TPS): 7대로 확장 (각 286 TPS, 부하 61%)
-  # =============================================================================
-
-#  transfer-relay-0:
-#    build:
-#      context: .
-#      dockerfile: services/transfer/instances/transfer-relay/Dockerfile
-#    container_name: transfer-relay-0
-#    restart: unless-stopped
-#    depends_on:
-#      postgres:
-#        condition: service_healthy
-#      kafka:
-#        condition: service_healthy
-#    environment:
-#      # Spring 설정
-#      SPRING_PROFILES_ACTIVE: dev
-#      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/transfer
-#      SPRING_DATASOURCE_USERNAME: postgres
-#      SPRING_DATASOURCE_PASSWORD: pass1234
-#
-#      # Kafka 설정
-#      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-#
-#      # 파티셔닝 설정 - Instance 0
-#      # MOD(event_id, 3) = 0 처리
-#      # 예: event_id가 0, 3, 6, 9, 12, 15...
-#      RELAY_INSTANCE_ID: 0
-#      RELAY_TOTAL_INSTANCES: 3
-#    networks:
-#      - default
-#
-#  transfer-relay-1:
-#    build:
-#      context: .
-#      dockerfile: services/transfer/instances/transfer-relay/Dockerfile
-#    container_name: transfer-relay-1
-#    restart: unless-stopped
-#    depends_on:
-#      postgres:
-#        condition: service_healthy
-#      kafka:
-#        condition: service_healthy
-#    environment:
-#      # Spring 설정
-#      SPRING_PROFILES_ACTIVE: dev
-#      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/transfer
-#      SPRING_DATASOURCE_USERNAME: postgres
-#      SPRING_DATASOURCE_PASSWORD: pass1234
-#
-#      # Kafka 설정
-#      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-#
-#      # 파티셔닝 설정 - Instance 1
-#      # MOD(event_id, 3) = 1 처리
-#      # 예: event_id가 1, 4, 7, 10, 13, 16...
-#      RELAY_INSTANCE_ID: 1
-#      RELAY_TOTAL_INSTANCES: 3
-#    networks:
-#      - default
-#
-#  transfer-relay-2:
-#    build:
-#      context: .
-#      dockerfile: services/transfer/instances/transfer-relay/Dockerfile
-#    container_name: transfer-relay-2
-#    restart: unless-stopped
-#    depends_on:
-#      postgres:
-#        condition: service_healthy
-#      kafka:
-#        condition: service_healthy
-#    environment:
-#      # Spring 설정
-#      SPRING_PROFILES_ACTIVE: dev
-#      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/transfer
-#      SPRING_DATASOURCE_USERNAME: postgres
-#      SPRING_DATASOURCE_PASSWORD: pass1234
-#
-#      # Kafka 설정
-#      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-#
-#      # 파티셔닝 설정 - Instance 2
-#      # MOD(event_id, 3) = 2 처리
-#      # 예: event_id가 2, 5, 8, 11, 14, 17...
-#      RELAY_INSTANCE_ID: 2
-#      RELAY_TOTAL_INSTANCES: 3
-#    networks:
-#      - default
 
 volumes:
   pg_data:                                               # Postgres 데이터 영속 볼륨

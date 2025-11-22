@@ -18,6 +18,13 @@ class SpringBootAppConventionPlugin : Plugin<Project> {
         target.pluginManager.apply("org.jetbrains.kotlin.plugin.allopen")
         target.pluginManager.apply("org.jetbrains.kotlin.kapt")
 
+        // Spring Cloud BOM 추가 (Spring Boot 3.3.2와 호환)
+        target.extensions.getByType(io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension::class.java).apply {
+            imports {
+                mavenBom("org.springframework.cloud:spring-cloud-dependencies:2023.0.3")
+            }
+        }
+
         target.extensions.configure<KotlinJvmProjectExtension> {
             jvmToolchain(21)
         }

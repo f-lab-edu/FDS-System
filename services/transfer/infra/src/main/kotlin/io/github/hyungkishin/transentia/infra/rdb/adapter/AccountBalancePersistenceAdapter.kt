@@ -12,8 +12,8 @@ class AccountBalancePersistenceAdapter(
     private val jpaRepository: AccountBalanceJpaRepository
 ) : AccountBalanceRepository {
 
-    override fun findByUserId(userId: SnowFlakeId): AccountBalance? =
-        jpaRepository.findById(userId.value).orElse(null)?.toDomain()
+    override fun findByUserId(snowFlakeId: SnowFlakeId): AccountBalance? =
+        jpaRepository.findById(snowFlakeId.value).orElse(null)?.toDomain()
 
     override fun save(account: AccountBalance): AccountBalance {
         val entity = AccountBalanceJpaEntity.from(account)

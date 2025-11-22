@@ -11,14 +11,21 @@ class KafkaConventionPlugin : Plugin<Project> {
         target.pluginManager.apply("org.jetbrains.kotlin.plugin.allopen")
         target.pluginManager.apply("io.spring.dependency-management")
 
-        target.afterEvaluate {
-            dependencies {
-                // TODO : spring cloude stream 마이그레이션
-                add("implementation", "org.springframework.kafka:spring-kafka")
-                add("implementation", "org.apache.kafka:kafka-streams")
-                add("implementation", "com.fasterxml.jackson.module:jackson-module-kotlin")
-                add("testImplementation", "org.springframework.kafka:spring-kafka-test")
+        // Spring Cloud BOM import (Spring Boot 3.3.2와 호환)
+        target.extensions.getByType(io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension::class.java).apply {
+            imports {
+                mavenBom("org.springframework.cloud:spring-cloud-dependencies:2023.0.3")
             }
+        }
+
+        target.dependencies {
+            // Spring Cloud Stream + Kafka Streams Binder (버전은 BOM에서 관리)
+            add("implementation", "org.springframework.cloud:spring-cloud-stream")
+            add("implementation", "org.springframework.cloud:spring-cloud-stream-binder-kafka-streams")
+            add("implementation", "org.springframework.kafka:spring-kafka")
+            add("implementation", "org.apache.kafka:kafka-streams")
+            add("implementation", "com.fasterxml.jackson.module:jackson-module-kotlin")
+            add("testImplementation", "org.springframework.kafka:spring-kafka-test")
         }
     }
 }

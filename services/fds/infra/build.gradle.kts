@@ -3,15 +3,27 @@ plugins {
     id("transentia.spring-jpa")
     id("transentia.kafka-convention")
     id("transentia.code-coverage")
+    id("io.spring.dependency-management")
+}
+
+dependencyManagement {
+    imports {
+        mavenBom("org.springframework.cloud:spring-cloud-dependencies:2023.0.3")
+    }
 }
 
 dependencies {
     implementation(project(":fds-application"))
     implementation(project(":fds-domain"))
     implementation(project(":common-domain"))
-    implementation(project(":kafka-consumer"))
     implementation(project(":kafka-model"))
 
+    // Spring Cloud Stream - 직접 추가
+    implementation("org.springframework.cloud:spring-cloud-stream")
+    implementation("org.springframework.cloud:spring-cloud-stream-binder-kafka-streams")
+    
+    // Kafka Streams Avro Serde - 필수!
+    implementation("io.confluent:kafka-streams-avro-serde:7.9.2")
     implementation("io.confluent:kafka-avro-serializer:7.9.2")
     implementation("org.apache.avro:avro:1.11.4")
     implementation("io.hypersistence:hypersistence-utils-hibernate-63:3.7.0")

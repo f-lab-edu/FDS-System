@@ -110,6 +110,8 @@ class AnalyzeTransferService(
      */
     private fun checkRapidTransfer(rule: FraudeRule, event: TransferCompleteEvent): RiskRuleHit? {
         // TODO: 시간 기반 쿼리로 최근 N분 내 송금 횟수 체크
+        println(rule)
+        println(event)
         return null
     }
 

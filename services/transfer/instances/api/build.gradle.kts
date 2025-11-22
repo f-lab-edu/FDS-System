@@ -12,4 +12,7 @@ dependencies {
     implementation("org.flywaydb:flyway-core")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    
+    // Apache HttpClient 5 for Connection Pool testing (Spring Boot 3.x uses HttpClient 5)
+    testImplementation("org.apache.httpcomponents.client5:httpclient5:5.2.1")
 }
