@@ -10,7 +10,6 @@ class AccountBalance private constructor(
     val userId: SnowFlakeId,
     val accountNumber: String,
     var balance: Amount,
-    val version: Long,
 ) {
 
     companion object {
@@ -19,9 +18,8 @@ class AccountBalance private constructor(
             userId: SnowFlakeId,
             accountNumber: String,
             balance: Amount,
-            version: Long
         ): AccountBalance {
-            return AccountBalance(id, userId, accountNumber, balance, version)
+            return AccountBalance(id, userId, accountNumber, balance)
         }
     }
 

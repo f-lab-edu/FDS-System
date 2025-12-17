@@ -11,6 +11,7 @@ import io.github.hyungkishin.transentia.common.message.transfer.TransferComplete
 import io.github.hyungkishin.transentia.common.snowflake.IdGenerator
 import io.github.hyungkishin.transentia.common.snowflake.SnowFlakeId
 import io.github.hyungkishin.transentia.container.model.transaction.Transaction
+import io.github.hyungkishin.transentia.container.model.user.User
 import io.github.hyungkishin.transentia.container.validator.transfer.TransferValidator
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
@@ -56,19 +57,47 @@ class TransactionService(
         return TransferResponseCommand.from(savedTransaction)
     }
 
-    private fun loadUsers(command: TransferRequestCommand) =
-        Pair(
-            userRepository.findById(command.senderId)
-                ?: throw DomainException(
-                    CommonError.NotFound("account_balance", command.senderId.toString()),
-                    "송신자 정보를 찾을 수 없습니다."
-                ),
-            userRepository.findByAccountNumber(command.receiverAccountNumber)
-                ?: throw DomainException(
-                    CommonError.NotFound("account_balance", command.receiverAccountNumber),
-                    "수신자 계좌 정보를 찾을 수 없습니다."
-                )
-        )
+    /**
+     * 데드락 방지를 위한 정렬된 락 획득
+     *
+     * 문제 시나리오 (정렬 없이 순차 락 획득 시):
+     * - Thread A: 계좌 A → 계좌 B 송금 (A 락 획득 후 B 락 대기)
+     * - Thread B: 계좌 B → 계좌 A 송금 (B 락 획득 후 A 락 대기)
+     * - 결과: 데드락 발생
+     *
+     * 해결: 계좌번호 오름차순 정렬 후 락 획득
+     * - 모든 트랜잭션이 동일한 순서로 락 획득 → 데드락 원천 차단
+     */
+    private fun loadUsers(command: TransferRequestCommand): Pair<User, User> {
+        val senderAccount = command.senderAccountNumber
+        val receiverAccount = command.receiverAccountNumber
+
+        // 계좌번호 오름차순 정렬하여 락 획득 순서 고정
+        val (firstAccount, secondAccount) = if (senderAccount < receiverAccount) {
+            senderAccount to receiverAccount
+        } else {
+            receiverAccount to senderAccount
+        }
+
+        // 정렬된 순서로 패시미스틱 락 획득
+        val firstUser = userRepository.findByAccountNumberWithLock(firstAccount)
+            ?: throw DomainException(
+                CommonError.NotFound("account_balance", firstAccount),
+                "계좌 정보를 찾을 수 없습니다: $firstAccount"
+            )
+        val secondUser = userRepository.findByAccountNumberWithLock(secondAccount)
+            ?: throw DomainException(
+                CommonError.NotFound("account_balance", secondAccount),
+                "계좌 정보를 찾을 수 없습니다: $secondAccount"
+            )
+
+        // sender/receiver 순서로 반환
+        return if (senderAccount < receiverAccount) {
+            Pair(firstUser, secondUser)
+        } else {
+            Pair(secondUser, firstUser)
+        }
+    }
 
     @Transactional(readOnly = true)
     override fun findTransfer(transactionId: Long): TransferResponseCommand {

@@ -52,6 +52,12 @@ class ApiResponseBodyAdvice(
         val req = request as? ServletServerHttpRequest
         val resp = response as? ServletServerHttpResponse
 
+        // Actuator endpoints는 래핑하지 않음
+        val path = req?.servletRequest?.requestURI
+        if (path?.startsWith("/actuator") == true) {
+            return body
+        }
+
         // 도메인별 커스터마이징 실행 (상태/헤더 자동 설정 등)
         if (req != null && resp != null) {
             customizers.filter { it.supports(body) }.forEach { it.customize(body, req, resp) }

@@ -1,0 +1,36 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Transfer API
+  - job_name: 'transfer-api'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:8080']
+        labels:
+          service: 'transfer-api'
+
+  # Transfer Relay Instances (3대)
+  - job_name: 'transfer-relay'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: 
+          - 'transfer-relay-0:8081'
+          - 'transfer-relay-1:8081'
+          - 'transfer-relay-2:8081'
+        labels:
+          service: 'transfer-relay'
+
+  # FDS API
+  - job_name: 'fds-api'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:8082']
+        labels:
+          service: 'fds-api'
+
+  # Prometheus 자체 모니터링
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

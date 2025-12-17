@@ -1,0 +1,117 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+     execution: local
+        script: simple-test.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 5 max VUs, 40s max duration (incl. graceful stop):
+              * default: 5 looping VUs for 10s (gracefulStop: 30s)
+
+time="2025-11-22T19:28:40+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"6921905879f8e29bd24e531594a8a46b\"}" source=console
+time="2025-11-22T19:28:40+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"692190589b4237337377134dbd826607\"}" source=console
+time="2025-11-22T19:28:40+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"69219058c17ad277af7944a9dcfb71c8\"}" source=console
+time="2025-11-22T19:28:40+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"69219058440a68ed456436b18289bbcb\"}" source=console
+
+running (01.0s), 5/5 VUs, 0 complete and 0 interrupted iterations
+default   [  10% ] 5 VUs  01.0s/10s
+time="2025-11-22T19:28:41+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"692190595f985a6d17188d0cec8840fd\"}" source=console
+time="2025-11-22T19:28:41+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"69219059539cf0306687e1a771985419\"}" source=console
+time="2025-11-22T19:28:41+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"692190595bb71d18d9c59651717545b6\"}" source=console
+time="2025-11-22T19:28:41+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"69219059ae3674236ec85540b1922085\"}" source=console
+
+running (02.0s), 5/5 VUs, 5 complete and 0 interrupted iterations
+default   [  20% ] 5 VUs  02.0s/10s
+time="2025-11-22T19:28:42+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"6921905ac6a674708de47a3311a51ce9\"}" source=console
+time="2025-11-22T19:28:42+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"6921905a09d92b9587777c61d90219a1\"}" source=console
+time="2025-11-22T19:28:42+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"6921905a95e6afd921331a776f7c7216\"}" source=console
+time="2025-11-22T19:28:42+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"6921905acbaf3091af76a2c8116489df\"}" source=console
+
+running (03.0s), 5/5 VUs, 10 complete and 0 interrupted iterations
+default   [  30% ] 5 VUs  03.0s/10s
+time="2025-11-22T19:28:43+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"6921905b7893aca874d0f98835059208\"}" source=console
+time="2025-11-22T19:28:43+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"6921905ba28e368eb23f524b0504fa44\"}" source=console
+time="2025-11-22T19:28:43+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"6921905b69adb2fc24893aa7b40397c7\"}" source=console
+time="2025-11-22T19:28:43+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"6921905b1b6496643674fa6f1aadaadb\"}" source=console
+
+running (04.0s), 5/5 VUs, 15 complete and 0 interrupted iterations
+default   [  40% ] 5 VUs  04.0s/10s
+time="2025-11-22T19:28:44+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"could not execute statement [ERROR: duplicate key value violates unique constraint \\\"transactions_pkey\\\"\\n  Detail: Key (id)=(250568244983762944) already exists.] [insert into transactions (amount,created_at,currency,received_at,receiver_user_id,sender_user_id,status,updated_at,version,id) values (?,?,?,?,?,?,?,?,?,?)]; SQL [insert into transactions (amount,created_at,currency,received_at,receiver_user_id,sender_user_id,status,updated_at,version,id) values (?,?,?,?,?,?,?,?,?,?)]; constraint [transactions_pkey]\",\"traceId\":\"6921905cdf779f31ef60c2d5a1b6f4a1\"}" source=console
+time="2025-11-22T19:28:44+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"6921905c4345a1a97a7dc8be5466024f\"}" source=console
+time="2025-11-22T19:28:44+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"6921905c1ebba825074d074ef984a4e4\"}" source=console
+time="2025-11-22T19:28:44+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"6921905c4549f48e0a3920166077da26\"}" source=console
+
+running (05.0s), 5/5 VUs, 20 complete and 0 interrupted iterations
+default   [  50% ] 5 VUs  05.0s/10s
+time="2025-11-22T19:28:45+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"6921905d59a1f310538a05e350098ad8\"}" source=console
+time="2025-11-22T19:28:45+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"6921905d49168d1150178a8d760b2515\"}" source=console
+time="2025-11-22T19:28:45+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"6921905d525ee1db06c33c15cad4f580\"}" source=console
+time="2025-11-22T19:28:45+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"6921905dd5462c85468680169f29ef2c\"}" source=console
+
+running (06.0s), 5/5 VUs, 25 complete and 0 interrupted iterations
+default   [  60% ] 5 VUs  06.0s/10s
+time="2025-11-22T19:28:46+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"6921905ea8cf4c247f6c965b8f7edb01\"}" source=console
+time="2025-11-22T19:28:46+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"6921905ed9d1479961c902aaef057038\"}" source=console
+time="2025-11-22T19:28:46+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"6921905e2ed235bf40fa9574a2a4013b\"}" source=console
+time="2025-11-22T19:28:46+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"6921905e7c564a520ca490cc7b18efe2\"}" source=console
+
+running (07.0s), 5/5 VUs, 30 complete and 0 interrupted iterations
+default   [  70% ] 5 VUs  07.0s/10s
+time="2025-11-22T19:28:48+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"6921905fa8100637821525d89b8f99d7\"}" source=console
+time="2025-11-22T19:28:48+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"6921905febd0acb277981dfc35fbb5e8\"}" source=console
+time="2025-11-22T19:28:48+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"6921905f61a73db581980b2abf4d6c51\"}" source=console
+time="2025-11-22T19:28:48+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"6921905f792ce67915be437f7e6168d9\"}" source=console
+
+running (08.0s), 5/5 VUs, 35 complete and 0 interrupted iterations
+default   [  80% ] 5 VUs  08.0s/10s
+time="2025-11-22T19:28:49+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"could not execute statement [ERROR: duplicate key value violates unique constraint \\\"transactions_pkey\\\"\\n  Detail: Key (id)=(250568262046191617) already exists.] [insert into transactions (amount,created_at,currency,received_at,receiver_user_id,sender_user_id,status,updated_at,version,id) values (?,?,?,?,?,?,?,?,?,?)]; SQL [insert into transactions (amount,created_at,currency,received_at,receiver_user_id,sender_user_id,status,updated_at,version,id) values (?,?,?,?,?,?,?,?,?,?)]; constraint [transactions_pkey]\",\"traceId\":\"6921906116e58175980e5fd0ba8db9fa\"}" source=console
+time="2025-11-22T19:28:49+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"69219061f77d72d5630501d789739c70\"}" source=console
+time="2025-11-22T19:28:49+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"692190617e5457a213f0aa6713cdfffe\"}" source=console
+time="2025-11-22T19:28:49+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"69219061d7642e987474f50332fb81bb\"}" source=console
+
+running (09.0s), 5/5 VUs, 40 complete and 0 interrupted iterations
+default   [  90% ] 5 VUs  09.0s/10s
+time="2025-11-22T19:28:50+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"692190626663776538f11e4aa3cda3c2\"}" source=console
+time="2025-11-22T19:28:50+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"69219062cf96d651227875cf797d0db4\"}" source=console
+time="2025-11-22T19:28:50+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"69219062914ab22b479da7b035f8ff7e\"}" source=console
+time="2025-11-22T19:28:50+09:00" level=info msg="Failed with status 500: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [io.github.hyungkishin.transentia.infra.rdb.entity.AccountBalanceJpaEntity#20001]\",\"traceId\":\"6921906211944f1947e5a4864aa31da3\"}" source=console
+
+running (10.0s), 5/5 VUs, 45 complete and 0 interrupted iterations
+default   [ 100% ] 5 VUs  10.0s/10s
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 100    9.806339/s
+    checks_succeeded...: 60.00% 60 out of 100
+    checks_failed......: 40.00% 40 out of 100
+
+    ✗ status is 200
+      ↳  20% — ✓ 10 / ✗ 40
+    ✓ response < 500ms
+
+    HTTP
+    http_req_duration..............: avg=19ms    min=6.25ms med=19.13ms max=46.81ms p(90)=28.75ms p(95)=40.16ms
+      { expected_response:true }...: avg=17.92ms min=6.63ms med=17.74ms max=38.33ms p(90)=26.49ms p(95)=32.41ms
+    http_req_failed................: 80.00% 40 out of 50
+    http_reqs......................: 50     4.903169/s
+
+    EXECUTION
+    iteration_duration.............: avg=1.01s   min=1s     med=1.01s   max=1.04s   p(90)=1.02s   p(95)=1.04s  
+    iterations.....................: 50     4.903169/s
+    vus............................: 5      min=5        max=5
+    vus_max........................: 5      min=5        max=5
+
+    NETWORK
+    data_received..................: 23 kB  2.3 kB/s
+    data_sent......................: 12 kB  1.2 kB/s
+
+
+
+
+running (10.2s), 0/5 VUs, 50 complete and 0 interrupted iterations
+default ✓ [ 100% ] 5 VUs  10s

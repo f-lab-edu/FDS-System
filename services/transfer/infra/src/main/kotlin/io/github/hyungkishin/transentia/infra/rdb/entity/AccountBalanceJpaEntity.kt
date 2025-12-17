@@ -34,9 +34,6 @@ class AccountBalanceJpaEntity(
     @Column(name = "currency", nullable = false)
     val currency: Currency = Currency.KRW,
 
-    @Version
-    var version: Long,
-
     ) : BaseEntity() {
 
     @OneToOne(fetch = FetchType.LAZY)
@@ -49,7 +46,6 @@ class AccountBalanceJpaEntity(
             SnowFlakeId(userId),
             accountNumber,
             Amount.fromMinor(balance, Currency.KRW),
-            version,
         )
 
     companion object {
@@ -60,7 +56,6 @@ class AccountBalanceJpaEntity(
                 balance = domain.current().minor,
                 currency = domain.current().currency,
                 accountNumber = domain.accountNumber,
-                version = domain.version,
             )
     }
 

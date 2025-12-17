@@ -43,6 +43,10 @@ class SpringBootAppConventionPlugin : Plugin<Project> {
             add("implementation", "org.springframework.boot:spring-boot-starter-json")
             add("implementation", "org.jetbrains.kotlin:kotlin-reflect")
 
+            // Observability - Actuator + Prometheus
+            add("implementation", "org.springframework.boot:spring-boot-starter-actuator")
+            add("implementation", "io.micrometer:micrometer-registry-prometheus")
+
             add("testImplementation", "org.springframework.boot:spring-boot-starter-test")
         }
 

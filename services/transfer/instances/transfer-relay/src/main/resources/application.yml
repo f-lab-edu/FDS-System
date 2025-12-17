@@ -59,5 +59,21 @@ app:
       transfer-events: transfer-transaction-events
 
 management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+      instance: ${PARTITION_ID:unknown}
   tracing:
     enabled: false

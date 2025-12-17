@@ -41,7 +41,7 @@ spring:
               # Avro Serde 설정
               default.key.serde: org.apache.kafka.common.serialization.Serdes$StringSerde
               default.value.serde: io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
-              schema.registry.url: http://localhost:8085
+              schema.registry.url: http://transfer-schema-registry:8081
               specific.avro.reader: true
             brokers: host.docker.internal:9094
 
@@ -102,3 +102,25 @@ kafka-config:
 app:
   transfer:
     topic: transfer-transaction-events
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  tracing:
+    enabled: false
+  zipkin:
+    tracing:
+      endpoint: http://localhost:9999/disabled

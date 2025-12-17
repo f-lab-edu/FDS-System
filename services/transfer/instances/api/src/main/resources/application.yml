@@ -23,7 +23,8 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
-    baseline-on-migrate: true
+    baseline-on-migrate: true  # Spring Batch 테이블 등 기존 스키마 존재 시에도 baseline 잡고 진행
+    baseline-version: 0       # baseline 버전을 0으로 설정하여 V1부터 적용
     validate-on-migrate: true
 
 logging:
@@ -35,7 +36,7 @@ logging:
 kafka-config:
   bootstrap-servers: host.docker.internal:9094
   schema-registry-url-key: schema.registry.url
-  schema-registry-url: http://localhost:8085
+  schema-registry-url: http://transfer-schema-registry:8081
   num-of-partitions: 3
   replication-factor: 1
 
@@ -59,10 +60,26 @@ id:
   snowflake:
     node-id: ${SNOWFLAKE_NODE_ID:1}
     custom-epoch: 1704067200000
-    max-clock-backward-ms: 5
+    max-clock-backward-ms: 10  # Docker 환경에서 clock drift 허용 범위 확대
 
 management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
   tracing:
-    enabled: true
-    sampling:
-      probability: 1.0
+    enabled: false
+  zipkin:
+    tracing:
+      endpoint: http://localhost:9999/disabled
