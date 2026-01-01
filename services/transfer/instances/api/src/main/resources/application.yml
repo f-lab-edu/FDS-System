@@ -1,6 +1,9 @@
 spring:
   application:
     name: transfer-api
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.actuate.autoconfigure.tracing.BraveAutoConfiguration
   datasource:
     url: jdbc:postgresql://localhost:5432/transfer
     username: postgres
@@ -79,7 +82,6 @@ management:
     tags:
       application: ${spring.application.name}
   tracing:
-    enabled: false
-  zipkin:
-    tracing:
-      endpoint: http://localhost:9999/disabled
+    enabled: true
+    sampling:
+      probability: 1.0  # 개발환경 100% 샘플링

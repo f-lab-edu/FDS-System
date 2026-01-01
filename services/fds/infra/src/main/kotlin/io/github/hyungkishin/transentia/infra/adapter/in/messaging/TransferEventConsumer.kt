@@ -2,10 +2,12 @@ package io.github.hyungkishin.transentia.infra.adapter.`in`.messaging
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.github.hyungkishin.transentia.application.service.AnalyzeTransferService
+import io.github.hyungkishin.transentia.infra.config.TracingTransformerSupplier
 import io.github.hyungkishin.transentia.infra.event.TransferEventMapper
 import io.github.hyungkishin.transentia.infrastructure.kafka.model.TransferEventAvroModel
 import org.apache.kafka.streams.kstream.KStream
 import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import java.util.function.Function
@@ -22,6 +24,7 @@ import java.util.function.Function
  * 특징:
  * - Stateless 처리 (이전 이벤트 참조 불필요)
  * - 실시간 차단/리뷰 판정
+ * - TracingTransformer로 분산 트레이싱 컨텍스트 전파
  */
 @Configuration
 class TransferEventConsumer(
@@ -35,15 +38,16 @@ class TransferEventConsumer(
     fun processTransferEvents(): Function<KStream<String, TransferEventAvroModel>, KStream<String, String>> {
         return Function { input ->
             input
+                .transformValues(TracingTransformerSupplier())
                 .peek { key, event ->
                     log.info(
                         "[FDS단일분석] 이벤트 수신 - key={} eventId={} accountId={} amount={}",
                         key, event.eventId, event.receiverId, event.amount
                     )
                 }
-                .mapValues { _, event ->
+                .mapValues { event ->
                     try {
-                        // 1. Avro → Domain Event 변환
+                        // 1. Domain Event 변환
                         val domainEvent = transferEventMapper.toDomain(event)
 
                         // 2. FDS 분석 실행 (Application Layer)
@@ -92,6 +96,9 @@ class TransferEventConsumer(
                         )
 
                         objectMapper.writeValueAsString(errorResult)
+                    } finally {
+                        // MDC 정리
+                        MDC.clear()
                     }
                 }
         }

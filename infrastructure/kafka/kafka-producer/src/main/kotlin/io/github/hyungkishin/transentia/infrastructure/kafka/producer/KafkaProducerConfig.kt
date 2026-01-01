@@ -41,6 +41,8 @@ class KafkaProducerConfig<K : Serializable, V : SpecificRecordBase>(
 
     @Bean
     fun kafkaTemplate(): KafkaTemplate<K, V> {
-        return KafkaTemplate(producerFactory())
+        return KafkaTemplate(producerFactory()).apply {
+            setObservationEnabled(true)
+        }
     }
 }

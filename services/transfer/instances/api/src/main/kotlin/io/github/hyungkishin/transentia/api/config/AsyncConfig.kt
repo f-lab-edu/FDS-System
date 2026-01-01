@@ -1,9 +1,8 @@
 package io.github.hyungkishin.transentia.api.config
 
-import org.slf4j.MDC
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.core.task.TaskDecorator
+import org.springframework.core.task.support.ContextPropagatingTaskDecorator
 import org.springframework.scheduling.annotation.EnableAsync
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
 import java.util.concurrent.Executor
@@ -24,28 +23,12 @@ class AsyncConfig {
         executor.setWaitForTasksToCompleteOnShutdown(true)
         executor.setAwaitTerminationSeconds(30)
 
-        // TaskDecorator 적용
-        executor.setTaskDecorator(mdcTaskDecorator())
+        // Spring Boot 3.0+ ContextPropagatingTaskDecorator
+        // MDC + Micrometer Observation Context 모두 전파
+        executor.setTaskDecorator(ContextPropagatingTaskDecorator())
 
         executor.initialize()
         return executor
-    }
-
-    // MDC 정보 전파를 위한 TaskDecorator
-    private fun mdcTaskDecorator(): TaskDecorator {
-        return TaskDecorator { runnable ->
-            val contextMap = MDC.getCopyOfContextMap()
-            Runnable {
-                try {
-                    if (contextMap != null) {
-                        MDC.setContextMap(contextMap)
-                    }
-                    runnable.run()
-                } finally {
-                    MDC.clear()
-                }
-            }
-        }
     }
 
 }

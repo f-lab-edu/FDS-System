@@ -9,11 +9,9 @@ import io.github.hyungkishin.transentia.infrastructure.kafka.model.TransferEvent
 import io.github.hyungkishin.transentia.infrastructure.kafka.model.TransferStatus
 import io.github.hyungkishin.transentia.infrastructure.kafka.producer.service.KafkaProducer
 import org.slf4j.LoggerFactory
-import org.slf4j.MDC
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.time.Instant
-import java.util.*
 
 @Component
 class KafkaTransferEventPublisher(
@@ -41,7 +39,6 @@ class KafkaTransferEventPublisher(
                         mapOf(
                             "eventType" to "TRANSFER_COMPLETED",
                             "eventVersion" to "v1",
-                            "traceId" to (MDC.get("traceId") ?: UUID.randomUUID().toString()),
                             "producer" to "transfer-api",
                             "contentType" to "application/json"
                         )
@@ -79,7 +76,6 @@ class KafkaTransferEventPublisher(
                     mapOf(
                         "eventType" to "TRANSFER_COMPLETED",
                         "eventVersion" to "v1",
-                        "traceId" to (MDC.get("traceId") ?: UUID.randomUUID().toString()),
                         "producer" to "transfer-api-fallback",
                         "contentType" to "application/json"
                     )
