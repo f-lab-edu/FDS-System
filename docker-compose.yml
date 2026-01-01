@@ -1,107 +1,83 @@
-version: "3.8"
-
 services:
   postgres:
-    image: postgres:15                                # 15는 LTS 급 안정성 + 최신 기능 균형. 로컬 개발엔 충분
-    container_name: transfer-postgres                 # compose ps에서 식별 쉬움 (transfer 네이밍 일관성)
-    restart: always                                   # 컨테이너 재시작 시 자동 복구
+    image: postgres:15
+    container_name: transfer-postgres
+    restart: always
     ports:
-      - "5432:5432"                                   # 호스트에서 직접 접속(애플리케이션 로컬 실행)을 위해 포트 노출
+      - "5432:5432"
     environment:
-      POSTGRES_USER: postgres                         # 개발 편의 기본 계정
-      POSTGRES_PASSWORD: pass1234                     # 로컬 개발용 임시 비밀번호
-      POSTGRES_DB: transfer                           # 서비스별 DB 분리 (transfer 전용)
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: pass1234
+      POSTGRES_DB: transfer
     volumes:
-      - pg_data:/var/lib/postgresql/data              # 데이터 영속화 (컨테이너 재기동/재생성에도 보존)
+      - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -d transfer" ]  # DB 기동 완료 시점을 compose 가 인지
-      interval: 5s                                    # TODO: 빠른 개발 사이클에 맞춘 짧은 간격 -> 운영 고려
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d transfer" ]
+      interval: 5s
       timeout: 3s
       retries: 10
 
   kafka:
-    image: bitnami/kafka:3.7                          # Kafka 3.x + KRaft 지원, 로컬에서 가볍고 표준적
-    container_name: transfer-kafka                    # 네이밍 통일(transfer), ps/logs에서 검색 쉬움
-    networks:
-      default:
-        aliases:
-          - transfer-kafka   # ✅ 내부 DNS에 transfer-kafka 등록
-          - kafka            # ✅ kafka 이름도 같이 등록
-    restart: unless-stopped                           # 명시적으로 중지하기 전까지 자동 재시작
+    image: apache/kafka:3.9.0
+    container_name: transfer-kafka
+    restart: unless-stopped
     ports:
-      - "9094:9094"                                   # 호스트에서 접속할 외부용 리스너(EXTERNAL) 포트로 9094 사용 (내부 9092와 구분)
+      - "9092:9092"
+      - "9094:9094"
     environment:
-      KAFKA_ENABLE_KRAFT: "yes"                       # ZK 미사용(KRaft) 모드 활성화
-      KAFKA_CFG_PROCESS_ROLES: "broker,controller"    # 단일 노드 개발환경 → 브로커/컨트롤러 겸용
-      KAFKA_CFG_NODE_ID: "1"                          # KRaft는 노드별 고유 ID 필요
-      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: "CONTROLLER"         # 컨트롤러 통신용 리스너 이름 지정
-      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"        # 단일 노드 쿼럼(개발용). 멀티 노드 되면 3개 이상으로 확장
-
-      # 리스너 3종(내부/외부/컨트롤러)을 분리
-      KAFKA_CFG_LISTENERS: "PLAINTEXT://:9092,EXTERNAL://:9094,CONTROLLER://:9093"  # 컨테이너 내부/외부/컨트롤러 용도 분리
-      KAFKA_CFG_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092,EXTERNAL://host.docker.internal:9094"
-
-      # 메타데이터 광고 주소 분리: 컨테이너 내부는 서비스명 kafka, 호스트는 localhost:9094로 접속하게 하여 '메타데이터 루프백' 문제 방지
-
-      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT"
-      # 로컬 개발은 보안 단순화(PLAINTEXT). 운영 전환 시 TLS/SASL로 변경
-
-      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"         # 브로커-브로커 통신은 내부 리스너로 통일
-      ALLOW_PLAINTEXT_LISTENER: "yes"                            # bitnami 이미지 보안 가드 해제(개발용 허용)
-
-      # 단일 노드이므로 RF/ISR을 1로 강제
-      KAFKA_CFG_DEFAULT_REPLICATION_FACTOR: "1"                 # 단일 브로커에서 복제 불가 → 1
-      KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"           # 내부 토픽도 단일 복제
-      KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"   # 트랜잭션 상태 로그도 단일 복제
-      KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR: "1"              # 단일 노드에서 ISR 최소 1 필요
-
-      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "false"              # 토픽은 명시적으로 생성(스키마/파티션 통제)
-      KAFKA_CFG_LOG_RETENTION_HOURS: "168"                      # 개발 기본 7일 보관(테스트 데이터 누적 방지/디스크 관리)
-
-      # 선택: KRaft 클러스터 ID 고정 (문제 시 주석 처리해 자동 생성에 맡겨도 됨)
-      KAFKA_KRAFT_CLUSTER_ID: "aaaaaaaaaaaaaaaaaaaaaa"          # 재기동/볼륨 유지 시 동일 클러스터로 인식
-
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_LOG_RETENTION_HOURS: 168
+      CLUSTER_ID: "aaaaaaaaaaaaaaaaaaaaaa"
     healthcheck:
-      test: [ "CMD-SHELL", "/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1" ]
-      # 브로커가 토픽 목록 조회가 가능해야 'healthy' 판단 → 내부 리스너(9092)로 자체 점검
+      test: [ "CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1" ]
       interval: 5s
       timeout: 5s
       retries: 20
     volumes:
-      - kafka_data:/bitnami/kafka                        # 로그/메타데이터 영속화(클러스터 ID/토픽 유지)
+      - kafka_data:/var/lib/kafka/data
 
   init-topics:
-    image: bitnami/kafka:3.7
+    image: apache/kafka:3.9.0
     container_name: transfer-kafka-init
     depends_on:
       kafka:
         condition: service_healthy
     command: >
       bash -c "
-      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic transfer-complete-events --partitions 8 --replication-factor 1 &&
-      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic transfer-transaction-events --partitions 3 --replication-factor 1 &&
-      echo 'topics created'
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic transfer-complete-events --partitions 3 --replication-factor 1 &&
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic transfer-transaction-events --partitions 3 --replication-factor 1 &&
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic fds-analysis-results --partitions 3 --replication-factor 1 &&
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic suspicious-patterns --partitions 3 --replication-factor 1 &&
+      echo 'Topics created successfully'
       "
     restart: "no"
 
   kafka-ui:
-    image: provectuslabs/kafka-ui:latest                 # TODO: 개발 중 토픽/메시지 관찰 (운영 시 고려 필요.)
+    image: provectuslabs/kafka-ui:latest
     container_name: transfer-kafka-ui
-    restart: unless-stopped                              # 개발 중 웹 UI 유지
+    restart: unless-stopped
     ports:
-      - "9000:8080"                                      # 호스트 8000에서 접속 (http://localhost:8000)
+      - "9000:8080"
     environment:
-      KAFKA_CLUSTERS_0_NAME: local                       # UI 내 클러스터 식별명
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092      # 컨테이너 네트워크 내부 주소 사용
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
     depends_on:
       kafka:
-        condition: service_healthy                       # 브로커 준비 후 UI 기동
+        condition: service_healthy
 
   schema-registry:
-    image: confluentinc/cp-schema-registry:latest
+    image: confluentinc/cp-schema-registry:7.6.0
     container_name: transfer-schema-registry
     restart: unless-stopped
     ports:
@@ -114,112 +90,43 @@ services:
       kafka:
         condition: service_healthy
 
-  # =============================================================================
-  # Relay 서버 3대 (파티셔닝)
-  # =============================================================================
-  # 
-  # 파티셔닝 전략:
-  #   - 각 인스턴스가 MOD(event_id, 3) = {0, 1, 2} 조건으로 서로 다른 이벤트 처리
-  #   - 락 경합 감소, 부하 분산
-  # 
-  # 확장 시나리오:
-  #   평시 (200 TPS): 3대 운영 (각 67 TPS, 부하 14%)
-  #   피크 (2000 TPS): 7대로 확장 (각 286 TPS, 부하 61%)
-  # =============================================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: transfer-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
-#  transfer-relay-0:
-#    build:
-#      context: .
-#      dockerfile: services/transfer/instances/transfer-relay/Dockerfile
-#    container_name: transfer-relay-0
-#    restart: unless-stopped
-#    depends_on:
-#      postgres:
-#        condition: service_healthy
-#      kafka:
-#        condition: service_healthy
-#    environment:
-#      # Spring 설정
-#      SPRING_PROFILES_ACTIVE: dev
-#      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/transfer
-#      SPRING_DATASOURCE_USERNAME: postgres
-#      SPRING_DATASOURCE_PASSWORD: pass1234
-#
-#      # Kafka 설정
-#      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-#
-#      # 파티셔닝 설정 - Instance 0
-#      # MOD(event_id, 3) = 0 처리
-#      # 예: event_id가 0, 3, 6, 9, 12, 15...
-#      RELAY_INSTANCE_ID: 0
-#      RELAY_TOTAL_INSTANCES: 3
-#    networks:
-#      - default
-#
-#  transfer-relay-1:
-#    build:
-#      context: .
-#      dockerfile: services/transfer/instances/transfer-relay/Dockerfile
-#    container_name: transfer-relay-1
-#    restart: unless-stopped
-#    depends_on:
-#      postgres:
-#        condition: service_healthy
-#      kafka:
-#        condition: service_healthy
-#    environment:
-#      # Spring 설정
-#      SPRING_PROFILES_ACTIVE: dev
-#      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/transfer
-#      SPRING_DATASOURCE_USERNAME: postgres
-#      SPRING_DATASOURCE_PASSWORD: pass1234
-#
-#      # Kafka 설정
-#      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-#
-#      # 파티셔닝 설정 - Instance 1
-#      # MOD(event_id, 3) = 1 처리
-#      # 예: event_id가 1, 4, 7, 10, 13, 16...
-#      RELAY_INSTANCE_ID: 1
-#      RELAY_TOTAL_INSTANCES: 3
-#    networks:
-#      - default
-#
-#  transfer-relay-2:
-#    build:
-#      context: .
-#      dockerfile: services/transfer/instances/transfer-relay/Dockerfile
-#    container_name: transfer-relay-2
-#    restart: unless-stopped
-#    depends_on:
-#      postgres:
-#        condition: service_healthy
-#      kafka:
-#        condition: service_healthy
-#    environment:
-#      # Spring 설정
-#      SPRING_PROFILES_ACTIVE: dev
-#      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/transfer
-#      SPRING_DATASOURCE_USERNAME: postgres
-#      SPRING_DATASOURCE_PASSWORD: pass1234
-#
-#      # Kafka 설정
-#      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-#
-#      # 파티셔닝 설정 - Instance 2
-#      # MOD(event_id, 3) = 2 처리
-#      # 예: event_id가 2, 5, 8, 11, 14, 17...
-#      RELAY_INSTANCE_ID: 2
-#      RELAY_TOTAL_INSTANCES: 3
-#    networks:
-#      - default
+  grafana:
+    image: grafana/grafana:latest
+    container_name: transfer-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
 
 volumes:
-  pg_data:                                               # Postgres 데이터 영속 볼륨
-  kafka_data:                                            # Kafka 로그/메타데이터 영속 볼륨
+  pg_data:
+  kafka_data:
+  prometheus_data:
+  grafana_data:
 
 networks:
   default:
     driver: bridge
-  fds-net:
-    external: true

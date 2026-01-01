@@ -1,0 +1,387 @@
+services:
+  # ============================================
+  # Load Balancer
+  # ============================================
+  nginx:
+    image: nginx:alpine
+    container_name: transfer-nginx-lb
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - transfer-api-1
+      - transfer-api-2
+      - fds-api-1
+      - fds-api-2
+    networks:
+      - fds-network
+
+  # ============================================
+  # Transfer API (이중화 2대)
+  # ============================================
+  transfer-api-1:
+    build:
+      context: ./services/transfer/instances/api
+      dockerfile: Dockerfile
+    container_name: transfer-api-1
+    restart: unless-stopped
+    cpus: '1.0'
+    mem_limit: 2g
+    mem_reservation: 1g
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8080
+      - INSTANCE_ID=api-1
+      - ID_SNOWFLAKE_NODEID=1
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/transfer
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=pass1234
+      - KAFKA_CONFIG_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_CONFIG_SCHEMA_REGISTRY_URL=http://schema-registry:8081
+      - SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=20
+      - MANAGEMENT_TRACING_ENABLED=false
+    expose:
+      - "8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - fds-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  transfer-api-2:
+    build:
+      context: ./services/transfer/instances/api
+      dockerfile: Dockerfile
+    container_name: transfer-api-2
+    restart: unless-stopped
+    cpus: '1.0'
+    mem_limit: 2g
+    mem_reservation: 1g
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8080
+      - INSTANCE_ID=api-2
+      - ID_SNOWFLAKE_NODEID=2
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/transfer
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=pass1234
+      - KAFKA_CONFIG_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_CONFIG_SCHEMA_REGISTRY_URL=http://schema-registry:8081
+      - SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=20
+      - MANAGEMENT_TRACING_ENABLED=false
+    expose:
+      - "8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - fds-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # FDS API (이중화 2대)
+  # ============================================
+  fds-api-1:
+    build:
+      context: ./services/fds/instances/api
+      dockerfile: Dockerfile
+    container_name: fds-api-1
+    restart: unless-stopped
+    cpus: '0.5'
+    mem_limit: 1g
+    mem_reservation: 512m
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8082
+      - INSTANCE_ID=fds-1
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/transfer
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=pass1234
+      - SPRING_CLOUD_STREAM_KAFKA_STREAMS_BINDER_BROKERS=kafka:9092
+      - SPRING_CLOUD_STREAM_KAFKA_STREAMS_BINDER_CONFIGURATION_SCHEMA_REGISTRY_URL=http://schema-registry:8081
+      - MANAGEMENT_TRACING_ENABLED=false
+    expose:
+      - "8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      transfer-api-1:
+        condition: service_healthy
+    networks:
+      - fds-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8082/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  fds-api-2:
+    build:
+      context: ./services/fds/instances/api
+      dockerfile: Dockerfile
+    container_name: fds-api-2
+    restart: unless-stopped
+    cpus: '0.5'
+    mem_limit: 1g
+    mem_reservation: 512m
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8082
+      - INSTANCE_ID=fds-2
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/transfer
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=pass1234
+      - SPRING_CLOUD_STREAM_KAFKA_STREAMS_BINDER_BROKERS=kafka:9092
+      - SPRING_CLOUD_STREAM_KAFKA_STREAMS_BINDER_CONFIGURATION_SCHEMA_REGISTRY_URL=http://schema-registry:8081
+      - MANAGEMENT_TRACING_ENABLED=false
+    expose:
+      - "8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      transfer-api-2:
+        condition: service_healthy
+    networks:
+      - fds-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8082/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # Transfer Relay (3대)
+  # ============================================
+  transfer-relay-0:
+    build:
+      context: ./services/transfer/instances/transfer-relay
+      dockerfile: Dockerfile
+    container_name: transfer-relay-0
+    restart: unless-stopped
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - PARTITION_ID=0
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/transfer
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=pass1234
+      - KAFKA_CONFIG_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_CONFIG_SCHEMA_REGISTRY_URL=http://schema-registry:8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      transfer-api-1:
+        condition: service_healthy
+    networks:
+      - fds-network
+
+  transfer-relay-1:
+    build:
+      context: ./services/transfer/instances/transfer-relay
+      dockerfile: Dockerfile
+    container_name: transfer-relay-1
+    restart: unless-stopped
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - PARTITION_ID=1
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/transfer
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=pass1234
+      - KAFKA_CONFIG_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_CONFIG_SCHEMA_REGISTRY_URL=http://schema-registry:8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      transfer-api-1:
+        condition: service_healthy
+    networks:
+      - fds-network
+
+  transfer-relay-2:
+    build:
+      context: ./services/transfer/instances/transfer-relay
+      dockerfile: Dockerfile
+    container_name: transfer-relay-2
+    restart: unless-stopped
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - PARTITION_ID=2
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/transfer
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=pass1234
+      - KAFKA_CONFIG_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_CONFIG_SCHEMA_REGISTRY_URL=http://schema-registry:8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      transfer-api-1:
+        condition: service_healthy
+    networks:
+      - fds-network
+
+  # ============================================
+  # Database (PostgreSQL)
+  # ============================================
+  postgres:
+    image: postgres:15
+    container_name: transfer-postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: pass1234
+      POSTGRES_DB: transfer
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d transfer"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - fds-network
+
+  # ============================================
+  # Kafka (Apache Official)
+  # ============================================
+  kafka:
+    image: apache/kafka:3.9.0
+    container_name: transfer-kafka
+    restart: unless-stopped
+    ports:
+      - "9092:9092"
+      - "9094:9094"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_LOG_RETENTION_HOURS: 168
+      CLUSTER_ID: "aaaaaaaaaaaaaaaaaaaaaa"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - fds-network
+
+  # ============================================
+  # Kafka Topic Initialization
+  # ============================================
+  init-topics:
+    image: apache/kafka:3.9.0
+    container_name: transfer-kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    command: >
+      bash -c "
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic transfer-transaction-events --partitions 3 --replication-factor 1 &&
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic fds-analysis-results --partitions 3 --replication-factor 1 &&
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic suspicious-patterns --partitions 3 --replication-factor 1 &&
+      echo 'Topics created successfully'
+      "
+    restart: "no"
+    networks:
+      - fds-network
+
+  # ============================================
+  # Schema Registry
+  # ============================================
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.6.0
+    container_name: transfer-schema-registry
+    restart: unless-stopped
+    ports:
+      - "8085:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:9092
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - fds-network
+
+  # ============================================
+  # Observability Stack
+  # ============================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: transfer-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus-prod.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    networks:
+      - fds-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: transfer-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - fds-network
+
+volumes:
+  pg_data:
+  kafka_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  fds-network:
+    driver: bridge

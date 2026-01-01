@@ -7,7 +7,5 @@ spring:
 
 app:
   outbox.relay:
-    batchSize: 1000             # 피크시 배치 크기 증가 (500 → 1000)
-    fixedDelayMs: 200           # 더 자주 처리 (1000ms → 200ms)
-    threadPoolSize: 16          # 멀티 스레드 증가 (8 → 16)
-    stuckThresholdSeconds: 60   # Stuck 감지 시간 단축 (120초 → 60초)
+    fixedDelayMs: 200           # 더 자주 처리 (1000ms -> 200ms)
+    threadPoolSize: 16          # 멀티 스레드 증가 (8 -> 16)

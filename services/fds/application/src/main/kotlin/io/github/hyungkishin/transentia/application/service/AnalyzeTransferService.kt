@@ -27,6 +27,8 @@ class AnalyzeTransferService(
         // TODO: 엣지케이스 -> 알림 + log 성 + 학습 + 관리자 !
         // 과연 은행사마다 만들었을까 ? 이상감지를 탐지해주는 패턴이 있을것이다.
 
+        // NOTE : Hive 류의 빅데이터 플랫폼 <- 데이터의 근거
+        // 10년치 계좌의 모든 계좌 이력의 전체 -> 불특정 다수 -> 관계도를 -> queryBase 로 찾을 경우 ( 성능 up 비용이 높을때다. )
         // LAG + LLM
 
         // 모든 활성화된 룰 조회
@@ -108,6 +110,8 @@ class AnalyzeTransferService(
      */
     private fun checkRapidTransfer(rule: FraudeRule, event: TransferCompleteEvent): RiskRuleHit? {
         // TODO: 시간 기반 쿼리로 최근 N분 내 송금 횟수 체크
+        println(rule)
+        println(event)
         return null
     }
 

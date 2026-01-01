@@ -1,0 +1,6 @@
+{
+  "senderUserId": 1001,
+  "receiverUserId": 2001,
+  "amount": 10000,
+  "currency": "KRW"
+}

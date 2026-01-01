@@ -1,0 +1,48 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Transfer API (2대)
+  - job_name: 'transfer-api'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: 
+          - 'transfer-api-1:8080'
+          - 'transfer-api-2:8080'
+        labels:
+          service: 'transfer-api'
+
+  # FDS API (2대)
+  - job_name: 'fds-api'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: 
+          - 'fds-api-1:8082'
+          - 'fds-api-2:8082'
+        labels:
+          service: 'fds-api'
+
+  # Transfer Relay (3대)
+  - job_name: 'transfer-relay'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: 
+          - 'transfer-relay-0:8081'
+          - 'transfer-relay-1:8081'
+          - 'transfer-relay-2:8081'
+        labels:
+          service: 'transfer-relay'
+
+  # Nginx LB
+  - job_name: 'nginx'
+    metrics_path: '/nginx_status'
+    static_configs:
+      - targets: ['nginx:80']
+        labels:
+          service: 'nginx-lb'
+
+  # Prometheus 자체
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

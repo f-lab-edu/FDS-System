@@ -18,6 +18,13 @@ class SpringBootAppConventionPlugin : Plugin<Project> {
         target.pluginManager.apply("org.jetbrains.kotlin.plugin.allopen")
         target.pluginManager.apply("org.jetbrains.kotlin.kapt")
 
+        // Spring Cloud BOM 추가 (Spring Boot 3.3.2와 호환)
+        target.extensions.getByType(io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension::class.java).apply {
+            imports {
+                mavenBom("org.springframework.cloud:spring-cloud-dependencies:2023.0.3")
+            }
+        }
+
         target.extensions.configure<KotlinJvmProjectExtension> {
             jvmToolchain(21)
         }
@@ -35,6 +42,10 @@ class SpringBootAppConventionPlugin : Plugin<Project> {
             add("implementation", "org.springframework.boot:spring-boot-starter-validation")
             add("implementation", "org.springframework.boot:spring-boot-starter-json")
             add("implementation", "org.jetbrains.kotlin:kotlin-reflect")
+
+            // Observability - Actuator + Prometheus
+            add("implementation", "org.springframework.boot:spring-boot-starter-actuator")
+            add("implementation", "io.micrometer:micrometer-registry-prometheus")
 
             add("testImplementation", "org.springframework.boot:spring-boot-starter-test")
         }

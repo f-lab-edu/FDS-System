@@ -1,0 +1,127 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+     execution: local
+        script: simple-test.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 5 max VUs, 40s max duration (incl. graceful stop):
+              * default: 5 looping VUs for 10s (gracefulStop: 30s)
+
+time="2025-11-23T03:01:40+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682227791241216,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:40+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682227791241217,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:40+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682227787042816,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:40+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682227787042817,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:40+09:00" level=info msg="Status: 500, Body: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-v" source=console
+
+running (01.0s), 5/5 VUs, 0 complete and 0 interrupted iterations
+default   [  10% ] 5 VUs  01.0s/10s
+time="2025-11-23T03:01:41+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682232161705985,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:41+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682232157507585,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:41+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682232157507584,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:41+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682232157507586,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:41+09:00" level=info msg="Status: 500, Body: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-v" source=console
+
+running (02.0s), 5/5 VUs, 5 complete and 0 interrupted iterations
+default   [  20% ] 5 VUs  02.0s/10s
+time="2025-11-23T03:01:42+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682236427313152,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:42+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682236427313153,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:42+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682236427309057,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:42+09:00" level=info msg="Status: 500, Body: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-v" source=console
+time="2025-11-23T03:01:42+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682236452478976,\"status\":\"PENDING\",\"crea" source=console
+
+running (03.0s), 5/5 VUs, 10 complete and 0 interrupted iterations
+default   [  30% ] 5 VUs  03.0s/10s
+time="2025-11-23T03:01:43+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682240797777921,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:43+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682240797777920,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:43+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682240797773825,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:43+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682240806162432,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:43+09:00" level=info msg="Status: 500, Body: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-v" source=console
+
+running (04.0s), 5/5 VUs, 15 complete and 0 interrupted iterations
+default   [  40% ] 5 VUs  04.0s/10s
+time="2025-11-23T03:01:44+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682245143076864,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:44+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682245168238592,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:44+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682245168238593,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:44+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682245155659776,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:44+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682245185019904,\"status\":\"PENDING\",\"crea" source=console
+
+running (05.0s), 5/5 VUs, 20 complete and 0 interrupted iterations
+default   [  50% ] 5 VUs  05.0s/10s
+time="2025-11-23T03:01:45+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682249505153024,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:45+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682249530318848,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:45+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682249530314752,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:45+09:00" level=info msg="Status: 500, Body: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-v" source=console
+time="2025-11-23T03:01:45+09:00" level=info msg="Status: 500, Body: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-v" source=console
+
+running (06.0s), 5/5 VUs, 25 complete and 0 interrupted iterations
+default   [  60% ] 5 VUs  06.0s/10s
+time="2025-11-23T03:01:46+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682253808508928,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:46+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682253829480448,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:46+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682253842063360,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:46+09:00" level=info msg="Status: 500, Body: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-v" source=console
+time="2025-11-23T03:01:46+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682253825282048,\"status\":\"PENDING\",\"crea" source=console
+
+running (07.0s), 5/5 VUs, 30 complete and 0 interrupted iterations
+default   [  70% ] 5 VUs  07.0s/10s
+time="2025-11-23T03:01:47+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682258178973696,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:47+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682258174775296,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:47+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682258183163904,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:47+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682258170585088,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:47+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682258178969600,\"status\":\"PENDING\",\"crea" source=console
+
+running (08.0s), 5/5 VUs, 35 complete and 0 interrupted iterations
+default   [  80% ] 5 VUs  08.0s/10s
+time="2025-11-23T03:01:48+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682262511685633,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:48+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682262511685632,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:48+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682262515884034,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:48+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682262515884033,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:48+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682262515884032,\"status\":\"PENDING\",\"crea" source=console
+
+running (09.0s), 5/5 VUs, 40 complete and 0 interrupted iterations
+default   [  90% ] 5 VUs  09.0s/10s
+time="2025-11-23T03:01:49+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682266831822848,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:49+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682266836013056,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:49+09:00" level=info msg="Status: 200, Body: {\"code\":\"ok\",\"message\":\"success\",\"data\":{\"transactionId\":250682266836013057,\"status\":\"PENDING\",\"crea" source=console
+time="2025-11-23T03:01:49+09:00" level=info msg="Status: 500, Body: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-v" source=console
+time="2025-11-23T03:01:49+09:00" level=info msg="Status: 500, Body: {\"code\":\"unhandled_error\",\"message\":\"Row was updated or deleted by another transaction (or unsaved-v" source=console
+
+running (10.0s), 5/5 VUs, 45 complete and 0 interrupted iterations
+default   [ 100% ] 5 VUs  10.0s/10s
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 100    9.629593/s
+    checks_succeeded...: 91.00% 91 out of 100
+    checks_failed......: 9.00%  9 out of 100
+
+    ✗ status is 200
+      ↳  82% — ✓ 41 / ✗ 9
+    ✓ response < 500ms
+
+    HTTP
+    http_req_duration..............: avg=37.07ms min=9.89ms med=34.39ms max=79.18ms p(90)=48.68ms p(95)=75.96ms
+      { expected_response:true }...: avg=36.31ms min=9.89ms med=34.03ms max=77.26ms p(90)=45.82ms p(95)=74.38ms
+    http_req_failed................: 18.00% 9 out of 50
+    http_reqs......................: 50     4.814796/s
+
+    EXECUTION
+    iteration_duration.............: avg=1.03s   min=1.01s  med=1.03s   max=1.08s   p(90)=1.05s   p(95)=1.07s  
+    iterations.....................: 50     4.814796/s
+    vus............................: 5      min=5       max=5
+    vus_max........................: 5      min=5       max=5
+
+    NETWORK
+    data_received..................: 19 kB  1.8 kB/s
+    data_sent......................: 14 kB  1.3 kB/s
+
+
+
+
+running (10.4s), 0/5 VUs, 50 complete and 0 interrupted iterations
+default ✓ [ 100% ] 5 VUs  10s

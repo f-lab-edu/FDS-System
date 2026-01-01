@@ -6,11 +6,12 @@ import jakarta.validation.constraints.Min
 import org.jetbrains.annotations.NotNull
 
 data class TransferRequest(
+    @field:NotNull val senderAccountNumber: String,
     @field:NotNull val receiverAccountNumber: String,
     @field:Min(1) val amount: String,
     @field:NotNull val message: String,
     @field:NotNull val currency: Currency,
 ) {
-    fun toCommand(senderUserId: Long): TransferRequestCommand =
-        TransferRequestCommand(senderUserId, receiverAccountNumber, amount, currency, message)
+    fun toCommand(): TransferRequestCommand =
+        TransferRequestCommand(senderAccountNumber, receiverAccountNumber, amount, currency, message)
 }

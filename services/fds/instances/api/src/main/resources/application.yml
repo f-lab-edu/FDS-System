@@ -1,58 +1,126 @@
+server:
+  port: 8082
+
 spring:
   application:
-    name: fds-consumer
-  main:
-    web-application-type: none
+    name: fds-service
 
+  # ============================================
+  # Spring Cloud Stream 설정
+  # ============================================
+  cloud:
+    function:
+      # 부하 테스트용: 하나만 활성화
+      definition: processTransferEvents
+      # definition: processTransferEvents;detectSuspiciousPatterns
+    
+    stream:
+      bindings:
+        # [파이프라인 A] 단일 이벤트 처리
+        processTransferEvents-in-0:
+          destination: transfer-transaction-events
+          group: fds-consumer-group
+        processTransferEvents-out-0:
+          destination: fds-analysis-results
+        
+        # [파이프라인 B] 10분 윈도우 집계
+        detectSuspiciousPatterns-in-0:
+          destination: transfer-transaction-events
+          group: pattern-detector-group
+        detectSuspiciousPatterns-out-0:
+          destination: suspicious-patterns
+      
+      kafka:
+        streams:
+          binder:
+            configuration:
+              application.id: fds-stream-processor
+              commit.interval.ms: 1000
+              replication.factor: 1
+              num.stream.threads: 2
+              # Avro Serde 설정
+              default.key.serde: org.apache.kafka.common.serialization.Serdes$StringSerde
+              default.value.serde: io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
+              schema.registry.url: http://transfer-schema-registry:8081
+              specific.avro.reader: true
+            brokers: host.docker.internal:9094
+
+  # ============================================
+  # Database 설정
+  # ============================================
   datasource:
     url: jdbc:postgresql://localhost:5432/transfer
     username: postgres
     password: pass1234
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 10
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
 
   jpa:
     open-in-view: false
     hibernate:
       ddl-auto: none
-    show-sql: true
+    show-sql: false
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
 
   flyway:
     enabled: false
     locations: classpath:db/migration
     baseline-on-migrate: false
 
+# ============================================
+# Logging 설정
+# ============================================
 logging:
   level:
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.hibernate.SQL: INFO
+    org.hibernate.type.descriptor.sql.BasicBinder: INFO
     org.springframework.kafka: INFO
+    org.springframework.cloud.stream: INFO
+    org.apache.kafka.streams: INFO
     io.github.hyungkishin.transentia: DEBUG
 
+# ============================================
+# Legacy Config (하위 호환)
+# ============================================
 kafka-config:
   bootstrap-servers: host.docker.internal:9094
   schema-registry-url-key: schema.registry.url
   schema-registry-url: http://localhost:8085
-  num-of-partitions: 8
+  num-of-partitions: 3
   replication-factor: 1
-
-kafka-consumer-config:
-  key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-  value-deserializer: io.confluent.kafka.serializers.KafkaAvroDeserializer
-  consumer-group-id: fds-consumer-group
-  auto-offset-reset: earliest
-  specific-avro-reader-key: specific.avro.reader
-  specific-avro-reader: true
-  batch-listener: true
-  auto-startup: true
-  concurrency-level: 2 # 2000 TPS 는 4
-  session-timeout-ms: 10000
-  heartbeat-interval-ms: 3000
-  max-poll-interval-ms: 300000
-  max-poll-records: 500
-  max-partition-fetch-bytes-default: 1048576
-  max-partition-fetch-bytes-boost-factor: 1
-  poll-timeout-ms: 500
 
 app:
   transfer:
     topic: transfer-transaction-events
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  tracing:
+    enabled: false
+  zipkin:
+    tracing:
+      endpoint: http://localhost:9999/disabled

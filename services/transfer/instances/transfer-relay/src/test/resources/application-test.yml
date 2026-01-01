@@ -1,6 +1,7 @@
 spring:
   application:
     name: transfer-relay
+
   datasource:
     url: jdbc:postgresql://localhost:5432/transfer
     username: postgres
@@ -29,24 +30,44 @@ kafka-producer-config:
   valueSerializer: io.confluent.kafka.serializers.KafkaAvroSerializer
   compressionType: lz4
   acks: "1"
-  batchSize: 65536        # 64KB
+  batchSize: 65536
   batchSizeBoostFactor: 1
-  lingerMs: 5             # 배치 대기 시간
-  requestTimeoutMs: 5000
-  retryCount: 3
+  lingerMs: 5
+  requestTimeoutMs: 1000
+  retryCount: 0
+
+kafka-consumer-config:
+  key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+  value-deserializer: io.confluent.kafka.serializers.KafkaAvroDeserializer
+  consumer-group-id: fds-consumer-group
+  auto-offset-reset: earliest
+  specific-avro-reader-key: specific.avro.reader
+  specific-avro-reader: true
+  batch-listener: true
+  auto-startup: true
+  concurrency-level: 8
+  session-timeout-ms: 10000
+  heartbeat-interval-ms: 3000
+  max-poll-interval-ms: 300000
+  max-poll-records: 500
+  max-partition-fetch-bytes-default: 1048576
+  max-partition-fetch-bytes-boost-factor: 1
+  poll-timeout-ms: 150
 
 app:
   outbox:
     relay:
-      batchSize: 1000                     # 테스트에서는 더 크게
+      chunkSize: 100
       fixedDelayMs: 1000
-      initialDelayMs: 2000
+      initialDelayMs: 5000
       timeoutSeconds: 10
-      threadPoolSize: 4
       baseBackoffMs: 5000
-      maxBackoffMs: 600000
-      stuckThresholdSeconds: 120          # 2분
+      sendingTimeoutSeconds: 120
       slowProcessingThresholdMs: 3000
+      
+      # 파티셔닝 설정 (테스트에서는 코드에서 주입)
+      instanceId: 0
+      totalInstances: 1
 
   kafka:
     topics:
