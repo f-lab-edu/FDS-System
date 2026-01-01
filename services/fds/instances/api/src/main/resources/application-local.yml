@@ -1,0 +1,20 @@
+# ============================================
+# Local 환경용 설정 (Docker 호스트명 → localhost)
+# ============================================
+spring:
+  kafka:
+    bootstrap-servers: localhost:9094
+  cloud:
+    stream:
+      kafka:
+        binder:
+          brokers: localhost:9094
+        streams:
+          binder:
+            brokers: localhost:9094
+            configuration:
+              schema.registry.url: http://localhost:8085
+
+kafka-config:
+  bootstrap-servers: localhost:9094
+  schema-registry-url: http://localhost:8085

@@ -1,0 +1,6 @@
+# ============================================
+# Local 환경용 설정 (Docker 호스트명 → localhost)
+# ============================================
+kafka-config:
+  bootstrap-servers: localhost:9094
+  schema-registry-url: http://localhost:8085

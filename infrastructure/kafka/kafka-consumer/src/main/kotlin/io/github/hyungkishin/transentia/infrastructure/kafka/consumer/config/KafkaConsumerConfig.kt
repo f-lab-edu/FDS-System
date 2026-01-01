@@ -101,6 +101,7 @@ class KafkaConsumerConfig<K : Serializable, V : SpecificRecordBase>(
         factory.containerProperties.apply {
             pollTimeout = kafkaConsumerConfigData.pollTimeoutMs
             ackMode = ContainerProperties.AckMode.MANUAL_IMMEDIATE
+            isObservationEnabled = true  // 트레이싱 활성화
         }
         
         return factory

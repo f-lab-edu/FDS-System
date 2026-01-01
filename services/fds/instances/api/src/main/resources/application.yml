@@ -4,6 +4,9 @@ server:
 spring:
   application:
     name: fds-service
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.actuate.autoconfigure.tracing.BraveAutoConfiguration
 
   # ============================================
   # Spring Cloud Stream 설정
@@ -120,7 +123,6 @@ management:
     tags:
       application: ${spring.application.name}
   tracing:
-    enabled: false
-  zipkin:
-    tracing:
-      endpoint: http://localhost:9999/disabled
+    enabled: true
+    sampling:
+      probability: 1.0  # 개발환경 100% 샘플링
