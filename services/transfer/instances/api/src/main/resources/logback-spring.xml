@@ -1,12 +1,30 @@
 <configuration>
+    <!-- 로그 경로 설정 -->
+    <property name="LOG_PATH" value="${LOG_PATH:-/Users/hyungki/project/back-end/logs}" />
+
+    <!-- 콘솔 출력 (기존) -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>
-                %d{HH:mm:ss.SSS} [%5level] [%X{traceId:-}] %logger{25} - %msg%n
-            </pattern>
+            <pattern>%d{HH:mm:ss.SSS} [%5level] [%X{traceId:-}] %logger{25} - %msg%n</pattern>
         </encoder>
     </appender>
+
+    <!-- JSON 파일 출력 (ELK용) -->
+    <appender name="JSON_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/transfer-api.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/transfer-api.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+        </rollingPolicy>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeMdcKeyName>traceId</includeMdcKeyName>
+            <includeMdcKeyName>spanId</includeMdcKeyName>
+            <customFields>{"app_name":"transfer-api"}</customFields>
+        </encoder>
+    </appender>
+
     <root level="INFO">
         <appender-ref ref="CONSOLE" />
+        <appender-ref ref="JSON_FILE" />
     </root>
 </configuration>

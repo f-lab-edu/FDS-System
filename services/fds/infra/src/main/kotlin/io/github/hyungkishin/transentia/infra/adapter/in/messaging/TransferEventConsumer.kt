@@ -2,7 +2,7 @@ package io.github.hyungkishin.transentia.infra.adapter.`in`.messaging
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.github.hyungkishin.transentia.application.service.AnalyzeTransferService
-import io.github.hyungkishin.transentia.infra.config.TracingTransformerSupplier
+import io.github.hyungkishin.transentia.infra.config.TracingProcessorSupplier
 import io.github.hyungkishin.transentia.infra.event.TransferEventMapper
 import io.github.hyungkishin.transentia.infrastructure.kafka.model.TransferEventAvroModel
 import org.apache.kafka.streams.kstream.KStream
@@ -38,7 +38,7 @@ class TransferEventConsumer(
     fun processTransferEvents(): Function<KStream<String, TransferEventAvroModel>, KStream<String, String>> {
         return Function { input ->
             input
-                .transformValues(TracingTransformerSupplier())
+                .processValues(TracingProcessorSupplier())
                 .peek { key, event ->
                     log.info(
                         "[FDS단일분석] 이벤트 수신 - key={} eventId={} accountId={} amount={}",

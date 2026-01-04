@@ -43,3 +43,6 @@ out/
 # Kotlin Daemon logs
 buildSrc/.kotlin/errors/
 
+### Application Logs ###
+logs/
+
