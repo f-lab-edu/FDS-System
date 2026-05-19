@@ -10,9 +10,10 @@ import org.springframework.context.annotation.Configuration
 class IdConfig {
 
     @Bean
-    fun idGenerator(p: SnowflakeProps): IdGenerator {
+    fun idGenerator(p: SnowflakeProps, resolver: SnowflakeNodeIdResolver): IdGenerator {
+        val nodeId = if (p.nodeId > 0) p.nodeId else resolver.resolve()
         val sf = Snowflake(
-            nodeId = p.nodeId,
+            nodeId = nodeId,
             customEpoch = p.customEpoch,
             maxClockBackwardMs = p.maxClockBackwardMs
         )

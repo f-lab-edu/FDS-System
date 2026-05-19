@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop, "feat/**"]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', 'gradle/libs.versions.toml') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Permission gradlew
+        run: chmod +x gradlew
+
+      - name: Compile
+        run: ./gradlew compileKotlin compileTestKotlin --no-daemon --stacktrace
+
+      - name: YAML / JSON 문법 검증
+        run: |
+          ruby -ryaml -e "
+            ARGV.each { |f|
+              begin
+                YAML.load_stream(File.read(f))
+                puts \"OK: #{f}\"
+              rescue => e
+                puts \"ERR: #{f}: #{e.message}\"
+                exit 1
+              end
+            }
+          " \
+            monitoring/prometheus.yml \
+            monitoring/prometheus-alerts.yml \
+            monitoring/filebeat.yml \
+            monitoring/alertmanager/config.yml \
+            docker-compose.yml \
+            docker-compose.ha.yml \
+            docker-compose.chaos.yml
+          python3 -c "import json; json.load(open('monitoring/grafana/provisioning/dashboards/transentia.json'))"
+
+      - name: TODO/FIXME 잔존 게이트
+        run: |
+          count=$(grep -rn 'TODO\|FIXME' services/transfer services/fds --include='*.kt' 2>/dev/null | grep -v build/ | wc -l | tr -d ' ')
+          echo "TODO/FIXME 잔존: $count"
+          if [ "$count" -gt 0 ]; then
+            grep -rn 'TODO\|FIXME' services/transfer services/fds --include='*.kt' | grep -v build/
+            echo "TODO 가 새로 들어왔습니다. 후속 작업으로 NOTE 처리하거나 issue 트래커로 이관하세요."
+            exit 1
+          fi
+
+      - name: Unit/통합 테스트 (Testcontainers 제외)
+        # 컨테이너 부팅 비용이 큰 통합 테스트는 별도 job 으로 분리.
+        run: ./gradlew test --no-daemon -x :transfer-infra:test -x :fds-infra:test --stacktrace
+
+      - name: Test 결과 업로드
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            **/build/test-results/test/**/*.xml
+            **/build/reports/tests/test/**
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: build-and-test
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Permission gradlew
+        run: chmod +x gradlew
+
+      - name: Testcontainers 통합 테스트
+        run: ./gradlew :transfer-infra:test :fds-infra:test --no-daemon --stacktrace
+        env:
+          TESTCONTAINERS_RYUK_DISABLED: "true"
