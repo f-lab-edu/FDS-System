@@ -12,6 +12,7 @@
 | [E3](E3-circuit-breaker/) | Redis CB chaos | ⏸ NOT YET RUN | CB 적용 시 p95 < 200ms 유지 | 추정 / chaos 도구 부재 | [ADR-005](../adr/ADR-005-redis-daily-limit-cache.md) |
 | [E4](E4-load-baseline/) | k6 부하 베이스라인 | ✅ RUN (단발) | VU=10 선형, 50+ sublinear | 단일 인스턴스 한계 측정 | [DECISIONS-TIMELINE Stage 6](../DECISIONS-TIMELINE.md) |
 | [E5](E5-cdc-vs-outbox/) | CDC vs Outbox 처리량/지연 | ⏸ NOT YET RUN | CDC 가 lag p99 80%↓, DB CPU 30%↓ | 추정 / Debezium PoC 부재 | [ADR-010](../adr/ADR-010-async-event-publishing-evolution.md) |
+| [E6](E6-ai-score-evolution/) | AI score 어댑터 분포 | ⏸ NOT YET RUN | Heuristic score ≥0.7 분포 5% / Statistical cold start 안전 | 추정 / 라벨 부재로 정밀도 측정 불가 | [ADR-011](../adr/ADR-011-ml-anomaly-score-evolution.md) |
 
 ## 실험 방법론
 

@@ -76,10 +76,27 @@ Kafka Streams 의 듀얼 파이프라인으로 풀었습니다.
 - `detectSuspiciousPatterns` — 10분 `windowedBy` 로 분산송금 / 자금세탁 패턴 탐지.
 
 분석 결과는 `fraud_detections`, 의심 패턴 알림은 `suspicious_pattern_alerts` 에 적재합니다.
-ML 어댑터는 `AiScoreProvider` 포트만 두고 `NoOpAiScoreProvider` 로 시작했어요.
-후속 PR 에서 ES `dense_vector` kNN 으로 교체할 자리예요 ([PoC 설계](docs/etc/ml-anomaly-detection-poc.md)).
 
 근거: [ADR-004](docs/adr/ADR-004-kafka-streams-for-pattern-detection.md) · [회고](docs/retrospective/phase-3-streaming-and-fds.md)
+
+## Phase 4 — ML anomaly score 점진적 도입
+
+<p align="center">
+  <img src="docs/diagrams/svg/ml-evolution.svg" alt="AI score 4단계 진화" width="900"/>
+</p>
+
+`AiScoreProvider` 포트만 두고 한동안 `NoOpAiScoreProvider` 가 자리를 차지하고 있었어요.
+fraud 라벨 데이터가 0 인 상태에서 외부 ML SaaS 를 부르거나 자체 모델을 학습시키는 건 사이드 프로젝트 규모를 한참 넘는 일이라, 4단계로 점진적으로 들이기로 했습니다.
+
+- **Phase 0 (NoOp)** — `aiScore=null`. `RiskLog` 에 자리만 있고 채워지지 않음.
+- **Phase 1 (Heuristic)** — `HeuristicAiScoreAdapter`. 금액(log scale) + 시간(02~05 KST 새벽) + 속도(최근 5분 송금) 세 휴리스틱 가중합 → sigmoid → 0~1. 가중치는 사람 직관이고 학습은 0이에요. ML 이라기보다 룰 엔진의 확장에 가까운데, "PoC 1단계" 라는 명명으로 다음 어댑터 자리를 만들었습니다.
+- **Phase 2 (Statistical)** — `StatisticalAiScoreAdapter`. 사용자별 30일 롤링 `ln(amount)` 평균/표준편차로 `|z-score|` 계산. cold start (N<5) 는 0.0 반환. `application.yml` 의 `fds.ai.score-provider=statistical` 로 교체 가능.
+- **Phase 3 (Isolation Forest, 가설)** — Smile 라이브러리로 인-프로세스 ML. 학습 데이터 + 주기적 재학습 필요.
+- **Phase 4 (ES dense_vector kNN, 가설)** — 외부 임베딩 모델 + Elasticsearch `knn search`. 거의 실시간 유사 거래 검색.
+
+지금 운영되는 건 Phase 1 이에요. 가중치 0.4 / 0.25 / 0.1 / 0.2 / 0.3 / 0.15 가 모두 내 직관이라 부끄럽긴 한데, 라벨 없이는 어차피 정밀도 측정이 불가능해서 일단 분포 메트릭 (`fds.ai.score` p50/p95/p99) 만 노출해 두고 다음 라운드를 기다리는 자리예요.
+
+근거: [ADR-011](docs/adr/ADR-011-ml-anomaly-score-evolution.md) · [회고](docs/retrospective/phase-4-ml-evolution.md) · [E6 실험 (NOT YET RUN)](docs/experiments/E6-ai-score-evolution/) · [PoC 설계](docs/etc/ml-anomaly-detection-poc.md)
 
 ## 트래픽 진화 — Outbox 가 영구 정답은 아니에요
 

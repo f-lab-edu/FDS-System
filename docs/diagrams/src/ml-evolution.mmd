@@ -1,0 +1,21 @@
+%% AI Score Provider 점진적 진화 (ADR-011)
+flowchart LR
+    P0["Phase 0: NoOp<br/>aiScore = null<br/>RiskLog 에 빈 자리"]:::p0
+    P1["Phase 1: Heuristic<br/>4개 가중합 + sigmoid<br/>학습 0, 사람 직관"]:::p1
+    P2["Phase 2: Statistical<br/>z-score, 30일 롤링<br/>cold start 한계"]:::p2
+    P3["Phase 3: Isolation Forest<br/>인-프로세스 ML<br/>주기적 재학습"]:::p3
+    P4["Phase 4: ES kNN<br/>dense_vector<br/>외부 임베딩"]:::p4
+
+    P0 -->|"기본 → 휴리스틱"| P1
+    P1 -->|"가중치 한계<br/>true positive rate 정체"| P2
+    P2 -->|"다변량 패턴 미탐지<br/>cold start 손실"| P3
+    P3 -->|"신규/장기 미사용자<br/>cold start"| P4
+
+    note["전환 트리거 (메트릭)<br/>fds.ai.score p95 분포 정체<br/>실 fraud 라벨 도착 후 정밀도/재현율"]:::note
+
+    classDef p0 fill:#f3f4f6,stroke:#6b7280,color:#374151
+    classDef p1 fill:#dcfce7,stroke:#15803d,color:#14532d
+    classDef p2 fill:#dbeafe,stroke:#1e40af,color:#1e3a8a
+    classDef p3 fill:#fef3c7,stroke:#a16207,color:#713f12
+    classDef p4 fill:#fce7f3,stroke:#be185d,color:#831843
+    classDef note fill:#fee2e2,stroke:#b91c1c,color:#7f1d1d

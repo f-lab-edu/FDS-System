@@ -10,6 +10,8 @@
 | 1 | Outbox + 파티셔닝 (정합성) | [phase-1-outbox-and-partitioning.md](phase-1-outbox-and-partitioning.md) |
 | 2 | 관측성과 캐시 (운영성) | [phase-2-observability-and-cache.md](phase-2-observability-and-cache.md) |
 | 3 | 스트림 처리와 FDS (실시간성) | [phase-3-streaming-and-fds.md](phase-3-streaming-and-fds.md) |
+| 4 | ML anomaly score 점진적 도입 | [phase-4-ml-evolution.md](phase-4-ml-evolution.md) |
+| 메타 | 과잉 설계 점검 | [overengineering-check.md](overengineering-check.md) |
 
 ## 프로젝트 타임라인
 

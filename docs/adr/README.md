@@ -16,6 +16,7 @@
 | [008](ADR-008-build-logic-convention-plugins.md) | buildSrc → build-logic 이관 | Accepted | Gradle included build + convention plugin |
 | [009](ADR-009-experiment-driven-decisions.md) | 실험 주도 의사결정 | Accepted | `docs/experiments/EN-*/` 4종 문서 표준 (DESIGN/RESULTS/RETRO/diagrams) |
 | [010](ADR-010-async-event-publishing-evolution.md) | 비동기 이벤트 발행 진화 | Accepted (P1) / Proposed (P2~5) | 트래픽 레벨별 Outbox→CDC→TxProducer→ES 진화, 전환 트리거 메트릭 |
+| [011](ADR-011-ml-anomaly-score-evolution.md) | ML anomaly score 진화 | Accepted (P1) / Proposed (P2~4) | `AiScoreProvider` 의 NoOp→Heuristic→Statistical→Isolation Forest→ES kNN 4단계 |
 
 ## ADR 작성 규칙
 
