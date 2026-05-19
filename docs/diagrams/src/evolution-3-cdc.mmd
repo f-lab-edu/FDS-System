@@ -1,0 +1,28 @@
+%% Phase 3 — CDC (Debezium PostgreSQL Connector, 5K ~ 30K TPS)
+flowchart LR
+    Client[클라이언트]:::client
+    API[Transfer-API<br/>@Transactional]:::svc
+    PG[(PostgreSQL<br/>wal_level=logical)]:::store
+    WAL[(replication slot<br/>pgoutput)]:::wal
+    DBZ[Debezium Connector]:::cdc
+    KC[Kafka Connect<br/>클러스터 3노드]:::cdc
+    K{{Kafka<br/>transfer-transaction-events}}:::queue
+    FDS[FDS-API<br/>Envelope 디시리얼라이저]:::svc
+
+    Client -->|POST /transfer| API
+    API -->|tx + outbox row| PG
+    PG -.->|WAL 스트림| WAL
+    WAL --> DBZ
+    DBZ --> KC
+    KC -->|Avro Envelope| K
+    K --> FDS
+
+    note["전환 결정<br/>p99 latency 1s → 100ms<br/>비용: Kafka Connect 운영 + slot 관리<br/>이득: 폴링 제거, DB CPU 절감<br/>위험: slot 갈증 → WAL 디스크 폭증"]:::note
+
+    classDef client fill:#dbeafe,stroke:#1e40af,color:#1e3a8a
+    classDef svc fill:#dcfce7,stroke:#15803d,color:#14532d
+    classDef cdc fill:#fce7f3,stroke:#be185d,color:#831843
+    classDef store fill:#fee2e2,stroke:#b91c1c,color:#7f1d1d
+    classDef wal fill:#fed7aa,stroke:#c2410c,color:#7c2d12
+    classDef queue fill:#e0e7ff,stroke:#4f46e5,color:#312e81
+    classDef note fill:#f3f4f6,stroke:#6b7280,color:#374151

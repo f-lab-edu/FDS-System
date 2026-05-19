@@ -1,0 +1,35 @@
+%% Phase 2 — Polling 튜닝 (1K ~ 5K TPS)
+flowchart LR
+    Client[클라이언트]:::client
+    API[Transfer-API<br/>@Transactional]:::svc
+    PG[(PostgreSQL<br/>HikariCP 20)]:::store
+    R0[Relay 0]:::relay
+    R1[Relay 1]:::relay
+    R2[Relay 2]:::relay
+    R3[Relay 3]:::relay
+    R4[Relay 4]:::relay
+    K{{Kafka<br/>batch.size=64KB<br/>linger.ms=20}}:::queue
+    FDS[FDS-API]:::svc
+
+    Client -->|POST /transfer| API
+    API -->|tx + outbox| PG
+    PG -. "polling 200ms<br/>batch 5K~10K" .-> R0
+    PG -. polling 200ms .-> R1
+    PG -. polling 200ms .-> R2
+    PG -. polling 200ms .-> R3
+    PG -. polling 200ms .-> R4
+    R0 --> K
+    R1 --> K
+    R2 --> K
+    R3 --> K
+    R4 --> K
+    K --> FDS
+
+    tune["변경<br/>인스턴스 3→5, partition_count 3→5<br/>폴링 1s→200ms, 배치 1K→5K<br/>비용: DB CPU +15%~20%<br/>이득: TPS 한계 5배 추정"]:::note
+
+    classDef client fill:#dbeafe,stroke:#1e40af,color:#1e3a8a
+    classDef svc fill:#dcfce7,stroke:#15803d,color:#14532d
+    classDef relay fill:#fef3c7,stroke:#a16207,color:#713f12
+    classDef store fill:#fee2e2,stroke:#b91c1c,color:#7f1d1d
+    classDef queue fill:#e0e7ff,stroke:#4f46e5,color:#312e81
+    classDef note fill:#f3f4f6,stroke:#6b7280,color:#374151

@@ -1,0 +1,24 @@
+%% Phase 5 — Event Sourcing (100K+ TPS)
+flowchart LR
+    Client[클라이언트]:::client
+    API[Transfer-API<br/>Command Handler]:::svc
+    ES[(Event Store<br/>append-only)]:::store
+    P1[Projection 1<br/>잔액 read model]:::proj
+    P2[Projection 2<br/>거래 이력 read model]:::proj
+    P3[Projection 3<br/>감사 read model]:::proj
+    FDS[FDS-API]:::svc
+
+    Client -->|POST /transfer| API
+    API -->|append event| ES
+    ES -->|stream| P1
+    ES -->|stream| P2
+    ES -->|stream| P3
+    ES -->|stream| FDS
+
+    note["패러다임 전환<br/>전체 도메인 재모델링<br/>비용: 6개월+ 마이그레이션<br/>이득: 100K+ TPS, 시간 여행 쿼리, 감사 일급<br/>트리거: 100K+ TPS AND 규제 요구"]:::note
+
+    classDef client fill:#dbeafe,stroke:#1e40af,color:#1e3a8a
+    classDef svc fill:#dcfce7,stroke:#15803d,color:#14532d
+    classDef store fill:#fee2e2,stroke:#b91c1c,color:#7f1d1d
+    classDef proj fill:#fef3c7,stroke:#a16207,color:#713f12
+    classDef note fill:#f3f4f6,stroke:#6b7280,color:#374151

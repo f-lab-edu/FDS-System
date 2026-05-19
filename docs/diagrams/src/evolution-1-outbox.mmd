@@ -1,0 +1,29 @@
+%% Phase 1 — Outbox + Polling Relay (≤ 1K TPS)
+flowchart LR
+    Client[클라이언트]:::client
+    API[Transfer-API<br/>@Transactional]:::svc
+    PG[(PostgreSQL<br/>transactions<br/>+ transfer_events)]:::store
+    R0[Relay 0<br/>MOD=0]:::relay
+    R1[Relay 1<br/>MOD=1]:::relay
+    R2[Relay 2<br/>MOD=2]:::relay
+    K{{Kafka<br/>transfer-transaction-events}}:::queue
+    FDS[FDS-API<br/>Kafka Streams]:::svc
+
+    Client -->|POST /transfer| API
+    API -->|"INSERT tx + INSERT outbox<br/>(같은 트랜잭션)"| PG
+    PG -. polling 1s .-> R0
+    PG -. polling 1s .-> R1
+    PG -. polling 1s .-> R2
+    R0 -->|produce| K
+    R1 -->|produce| K
+    R2 -->|produce| K
+    K --> FDS
+
+    note["메트릭<br/>outbox_pending_count<br/>outbox_oldest_pending_seconds<br/>전환 트리거: p95 > 500 / p95 > 5s"]:::note
+
+    classDef client fill:#dbeafe,stroke:#1e40af,color:#1e3a8a
+    classDef svc fill:#dcfce7,stroke:#15803d,color:#14532d
+    classDef relay fill:#fef3c7,stroke:#a16207,color:#713f12
+    classDef store fill:#fee2e2,stroke:#b91c1c,color:#7f1d1d
+    classDef queue fill:#e0e7ff,stroke:#4f46e5,color:#312e81
+    classDef note fill:#f3f4f6,stroke:#6b7280,color:#374151
