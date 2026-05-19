@@ -89,6 +89,15 @@ spring:
     baseline-on-migrate: false
 
 # ============================================
+# FDS ML 어댑터 선택 (ADR-011)
+# noop | heuristic | statistical
+# 기본: heuristic (matchIfMissing)
+# ============================================
+fds:
+  ai:
+    score-provider: heuristic
+
+# ============================================
 # Logging 설정
 # ============================================
 logging:

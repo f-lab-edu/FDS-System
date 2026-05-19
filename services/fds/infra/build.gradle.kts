@@ -28,6 +28,9 @@ dependencies {
     implementation("org.apache.avro:avro:1.11.4")
     implementation("io.hypersistence:hypersistence-utils-hibernate-63:3.7.0")
 
+    // ML 어댑터의 메트릭 노출용
+    implementation("io.micrometer:micrometer-core")
+
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.kafka:spring-kafka-test")
     testImplementation(platform("org.testcontainers:testcontainers-bom:1.20.4"))
