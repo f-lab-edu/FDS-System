@@ -1,204 +1,276 @@
 # Transentia
 
-> 트랜잭션을 넘어, 자금의 흐름을 인식하고 판단하는 시스템입니다.
+> 트랜잭션을 넘어, 자금의 흐름을 인식하고 판단하는 시스템.
 
-Kafka 기반 이벤트 스트리밍, Redis 캐시, Rule/AI 기반 이상 거래 탐지, DLQ 복구, WebSocket 실시간 알림까지 통합한 **FDS 아키텍처**입니다.
-
----
-
-## 프로젝트 개요
-
-사용자 거래에서 이상 징후를 **실시간으로 감지**하고,  
-운영자에게 **알림 및 리포트**를 제공하는 **이상 거래 탐지 플랫폼**입니다.
-
-설계의 핵심은 다음과 같습니다.
-
-- **실시간성**: Kafka 이벤트 기반 구조
-- **신뢰성**: DLQ 복구 & TTL 기반 재처리
-- **확장성**: 도메인 분리, 멀티모듈 설계
-- **관측성**: 알림, 로그, 룰 기반 추적 가능
+Outbox 패턴 기반 송금, Kafka Streams 기반 실시간 FDS, ELK 통합 관측성, 분산 트레이싱을 한 레포에서 단계적으로 진화시키며 구축한 **이상거래탐지 플랫폼**.
 
 ---
 
-## 시스템 요약
+## 무엇을 푸는가
 
-| 구성 요소       | 기술 스택            | 설명 |
-|----------------|---------------------|------|
-| **API 서버**        | Spring Boot 3.x (REST) | 인증, 송금, 룰 등록 등 |
-| **비동기 처리**      | Apache Kafka         | 송금 이벤트 스트리밍 |
-| **Outbox Relay**    | @Scheduled + Partitioning | 이벤트 안정적 발행 |
-| **캐시/선차감 처리**  | Redis + Lua Script   | TTL 기반 상태 보존 |
-| **트랜잭션 저장**     | PostgreSQL / MySQL   | 정합성 있는 거래 기록 저장 |
-| **알림/대시보드**    | WebSocket / Slack    | 실시간 탐지 결과 전달 |
-| **복구/보정 처리**   | DLQ Worker + TTL     | 장애 발생 시 재처리 |
+은행/페이먼트의 송금 도메인에서 다음 세 가지를 동시에 만족시키는 일은 어렵다.
+
+1. **정합성** — 송금 DB 커밋과 이벤트 발행이 따로 놀면 안 된다. 한쪽이 실패하면 다른 쪽도 실패해야 한다.
+2. **실시간성** — 이상 거래는 "감지된 후"가 아니라 "처리되는 동안" 판단되어야 한다.
+3. **운영성** — traceId 한 줄로 송금 → Kafka → FDS → DB 까지 추적 가능해야 한다. 못 하면 장애를 못 잡는다.
+
+이 레포는 위 세 가지를 별도 phase 로 분리해 정복한 기록이다. 각 phase 는 **무엇을 잘못했고 어떻게 고쳤는지** 까지 회고로 남겼다.
 
 ---
 
-## Phase 1: Outbox 패턴 + 파티셔닝 ✅
+## 시스템 한 장 요약
 
-### 아키텍처
+```mermaid
+flowchart LR
+    Client[클라이언트] -->|HTTPS| Nginx
+    Nginx -->|/api/transfers| TransferAPI[Transfer-API :8080]
+    Nginx -->|/api/fds| FdsAPI[FDS-API :8082]
 
-```
-[Transfer Service]
-    ↓ (DB Transaction)
-[@Transactional]
-  - 송금 처리
-  - Outbox 저장 (같은 트랜잭션!)
-    ↓
-[Outbox Table]
-    ↓
-[Relay Server 3대]
-  - Instance 0: MOD(id,3)=0
-  - Instance 1: MOD(id,3)=1
-  - Instance 2: MOD(id,3)=2
-    ↓
-[Kafka Topic: transfers]
-    ↓
-[FDS Consumer]
-```
+    TransferAPI -->|@Transactional| PG[(PostgreSQL)]
+    TransferAPI -->|INCRBY| Redis[(Redis)]
+    TransferAPI -.->|ApplicationEvent| Outbox[(transfer_events)]
+    PG --- Outbox
 
-### 핵심 구현
+    Outbox -->|Polling MOD n| Relay[Transfer-Relay x3<br/>Spring Batch]
+    Relay -->|produce| Kafka{{Kafka<br/>transfer-transaction-events}}
 
-**1. 트랜잭션 원자성 보장**
-```kotlin
-@Transactional
-fun transfer(command: TransferCommand) {
-    transactionRepository.save(transaction)
-    outboxRepository.save(event)  // 같은 트랜잭션!
-}
+    Kafka -->|Streams A| FdsAPI
+    Kafka -->|Streams B 10m window| FdsAPI
+    FdsAPI -->|analysis| FraudDB[(fraud_detections)]
+    FdsAPI -->|alert| Alerts[(suspicious_pattern_alerts)]
+
+    TransferAPI -. JSON 로그 .-> Filebeat
+    FdsAPI -. JSON 로그 .-> Filebeat
+    Filebeat --> ES[(Elasticsearch)]
+    ES --> Kibana
 ```
 
-**2. 파티셔닝으로 병렬 처리**
-```kotlin
-// 각 인스턴스가 서로 다른 이벤트 처리
-SELECT * FROM transfer_events
-WHERE MOD(event_id, 3) = instanceId
-FOR UPDATE SKIP LOCKED
-```
-
-**3. 자동 재시도 (Exponential Backoff)**
-```kotlin
-1차 실패 → 2초 후 재시도
-2차 실패 → 4초 후 재시도
-3차 실패 → 8초 후 재시도
-...
-```
-
-### 성능 결과
-
-- **처리량**: 3대로 3배 향상 (470 TPS → 1,410 TPS)
-- **락 경합**: 제거 (각 인스턴스가 다른 파티션 처리)
-- **균등 분배**: 33.3% / 33.3% / 33.4%
-
-### 상세 문서
-
-- [Outbox Pattern 설계](docs/etc/outbox-pattern.md)
-- [파티셔닝 전략](docs/etc/partitioning-strategy.md)
-- [성능 테스트 결과](docs/etc/performance-test.md)
-- [Relay 서버 가이드](services/transfer/instances/transfer-relay/README.md)
+자세한 컨테이너 단위 다이어그램은 [`docs/etc/system-architecture.md`](docs/etc/system-architecture.md).
 
 ---
 
-## 테이블
+## Phase 1 — Outbox + 파티셔닝 (정합성)
 
-| 테이블명           | 설명 |
-|--------------------|------|
-| `users`            | 일반 사용자 정보 |
-| `account_balance`  | 계좌 잔액 관리 |
-| `admin_users`      | 운영자 정보 및 권한 |
-| `transactions`     | 송금 트랜잭션 요청/처리 |
-| `tx_history`       | 상태 변경 이력 기록 |
-| `transfer_events`  | Outbox 테이블 (이벤트 발행 큐) |
-| `correction_log`   | 정정(복구) 기록 |
-| `rules`            | 룰 정의 (JSON 기반 조건) |
-| `rule_history`     | 룰 버전 관리 |
-| `risk_logs`        | 단건 탐지 로그 |
-| `risk_rule_hits`   | 어떤 룰이 감지에 영향을 줬는지 |
-| `dlq_events`       | 실패 트랜잭션 로그 (DLQ 용도) |
+**문제**: `@Transactional` 안에서 Kafka 를 직접 호출하면 커밋 후 발행 실패 시 이벤트가 유실된다. 2PC 는 인프라 부담이 크다.
+
+**결정**: 트랜잭션 안에서 `transfer_events` 테이블에 outbox row 만 적재 → 별도 Relay 가 `FOR UPDATE SKIP LOCKED` 로 폴링.
+
+**진화 경로**:
+
+1. 단일 Relay → **다대 Relay 도입 후 빈 배치 1,658회** 발생
+2. `MOD(event_id, n) = instanceId` 파티셔닝 도입 → **DB 쿼리 99% 감소** (1,673회 → 17회)
+3. Spring Batch 로 이관해 single-instance multi-thread 전략 채택 (commit `1ba6a6c`)
+
+| 지표 | Before | After | 개선 |
+|---|---|---|---|
+| DB 쿼리 수 | 1,673회 | 17회 | **99% 감소** |
+| 분배 | 30/30/20 | 33.3/33.3/33.3 | 균등 |
+| 락 경합 | 높음 | 0 | 제거 |
+| TPS | 470 | 1,410 | **3배** |
+
+상세: [`docs/etc/performance-test.md`](docs/etc/performance-test.md) · [`docs/etc/partitioning-strategy.md`](docs/etc/partitioning-strategy.md) · ADR [001](docs/adr/ADR-001-hexagonal-architecture-pragmatic-adoption.md) [002](docs/adr/ADR-002-transactional-outbox-pattern.md) [003](docs/adr/ADR-003-relay-partitioning-by-modulo.md) · 회고 [Phase 1](docs/retrospective/phase-1-outbox-and-partitioning.md)
 
 ---
 
-## 운영자 권한 (Admin Role)
+## Phase 2 — 관측성과 캐시 (운영성)
 
-| Role 이름        | 설명 |
-|------------------|------|
-| `SUPER_ADMIN`    | 전체 권한 (모든 도메인) |
-| `RULE_ADMIN`     | 룰 등록/수정/삭제 |
-| `AUDITOR`        | 이력 열람 전용 |
-| `OPS_AGENT`      | 실시간 장애 처리 담당 |
-| `RISK_ANALYST`   | 탐지 로그 기반 분석 |
-| `READ_ONLY`      | 전체 조회만 가능 |
+**문제 1 (트레이싱 끊김)**: `@Async` 스레드와 Kafka producer/consumer 경계에서 traceId 가 사라져 장애를 추적할 수 없었다.
+
+**결정**: Micrometer Observation + `ContextPropagatingTaskDecorator` 로 `@Async` 컨텍스트 전파, Kafka Streams `TracingTransformer` 로 헤더에서 traceId 추출.
+
+**문제 2 (로그 검색 불가)**: 컨테이너 stdout 만 보면 traceId 로 cross-service 검색이 안 된다.
+
+**결정**: logback `LogstashEncoder` 로 JSON 파일 출력 → Filebeat 로 Elasticsearch 적재. 두 종류 인덱스 분리:
+- `app-logs-*` : 애플리케이션 로그 (`traceId` MDC 포함)
+- `access-logs-*` : Tomcat AccessLog Valve (HTTP 요청/응답)
+
+**문제 3 (일일 한도 비활성화)**: `TransferValidator` 의 일일 한도 검증이 `// TODO: redis cache 를 사용해야 할까?` 주석 처리된 채 1개월 방치.
+
+**결정**: Redis `INCRBY` + `EXPIRE` 로 `daily:transfer:{userId}:{yyyyMMdd}` 키 관리. 도메인은 누적치를 파라미터로 받는 포트 패턴.
+
+| 지표 | 효과 |
+|---|---|
+| traceId 일관성 | Transfer → Kafka → FDS 끝까지 동일 traceId 유지 |
+| AccessLog | Kibana 에서 `method/uri/status/duration_ms` 필드별 검색 |
+| Redis 일일 한도 | DB 집계 쿼리 제거, O(1) 캐시 |
+
+상세: [`docs/etc/observability-setup - ELK_Stack.md`](docs/etc/observability-setup%20-%20ELK_Stack.md) · [`docs/etc/W3C Trace Context.md`](docs/etc/W3C%20Trace%20Context.md) · ADR [004](docs/adr/ADR-005-redis-daily-limit-cache.md) [006](docs/adr/ADR-006-elk-observability.md) [007](docs/adr/ADR-007-distributed-tracing-context-propagation.md) · 회고 [Phase 2](docs/retrospective/phase-2-observability-and-cache.md)
+
+---
+
+## Phase 3 — 스트림 처리와 FDS (실시간성)
+
+**문제**: 룰 기반 단일 거래 탐지는 빠르지만 "10분간 5건 송금" 같은 시간 패턴은 못 잡는다. 외부 ML 서비스 호출은 응답성을 깬다.
+
+**결정**: Kafka Streams 듀얼 파이프라인 + ML 확장점.
+
+```
+transfer-transaction-events
+    ├─ processTransferEvents  (stateless, 즉시 차단/리뷰 판정)
+    │      └→ fds-analysis-results
+    │      └→ fraud_detections 테이블 적재
+    │
+    └─ detectSuspiciousPatterns (stateful, 10분 windowedBy)
+           └→ suspicious-patterns 토픽
+                └→ @KafkaListener → suspicious_pattern_alerts
+```
+
+**룰 엔진** (`AnalyzeTransferService`):
+- `SINGLE_HIGH_AMOUNT` — 2,000만원 단일 거래
+- `HIGH_AMOUNT` — 임계치 초과
+- `RAPID_TRANSFER` — N분 내 X건 (전용 Read-Model 쿼리)
+
+**ML 확장점**: `AiScoreProvider` 포트만 두고 `NoOpAiScoreProvider` 어댑터로 시작. 후속 PR 에서 ES dense_vector kNN 어댑터로 교체. 설계: [`docs/etc/ml-anomaly-detection-poc.md`](docs/etc/ml-anomaly-detection-poc.md).
+
+상세: [`docs/etc/kafkaStream.md`](docs/etc/kafkaStream.md) · ADR [004](docs/adr/ADR-004-kafka-streams-for-pattern-detection.md) · 회고 [Phase 3](docs/retrospective/phase-3-streaming-and-fds.md)
+
+---
+
+## 아키텍처 원칙
+
+| 원칙 | 적용 |
+|---|---|
+| **헥사고날 + 실용 절충** | `domain → application(ports) → infra(adapters) ← instances/api`. 순수성 100% 대신 80/20. ADR [001](docs/adr/ADR-001-hexagonal-architecture-pragmatic-adoption.md). |
+| **이벤트 우선** | 송금/탐지/알림 모두 이벤트 모델로 추상화. Kafka 토픽이 시스템 경계. |
+| **확장점은 포트로** | Redis/ML/AccessLog 모두 포트 + 어댑터로 끼워넣을 수 있는 자리만 만들어 둠. |
+| **단계적 진화** | 한 번에 큰 시스템 그리지 않음. Phase 1 동작 후 Phase 2/3 결정. |
+| **빌드는 컨벤션** | `build-logic/` 의 convention plugin 으로 모듈 boilerplate 제거. ADR [008](docs/adr/ADR-008-build-logic-convention-plugins.md). |
 
 ---
 
 ## 기술 스택
 
-- Language: **Java 21 / Kotlin**
-- Framework: **Spring Boot 3.x**
-- Messaging: **Apache Kafka**
-- DB: **PostgreSQL**
-- Cache: **Redis** (TTL + Lua)
-- Realtime: **WebSocket** / STOMP
-- Infra: **Docker**, Docker Compose
-- CI/CD: GitHub Actions (planned)
+- **언어**: Kotlin (도메인/어댑터), Java 21 (런타임)
+- **프레임워크**: Spring Boot 3.x, Spring Cloud Stream, Spring Kafka, Spring Batch
+- **메시징**: Apache Kafka 3.9 + Schema Registry + Avro
+- **저장소**: PostgreSQL 15, Redis 7
+- **관측성**: Micrometer Observation, Prometheus, ELK 8.x (Elasticsearch + Kibana + Filebeat)
+- **빌드**: Gradle 8.x + Kotlin DSL + Convention Plugins
+- **테스트**: JUnit5 + Testcontainers + k6 (부하)
+- **인프라**: Docker Compose
 
 ---
 
-## 실행 방법
+## 모듈 구조
 
-### 로컬 개발 환경
-
-```bash
-# 1. 인프라 실행 (PostgreSQL, Kafka, Redis)
-docker-compose up -d postgres kafka redis
-
-# 2. Transfer API 실행
-./gradlew :services:transfer:instances:transfer-api:bootRun
-
-# 3. Relay 서버 실행 (3대)
-docker-compose up -d transfer-relay-0 transfer-relay-1 transfer-relay-2
-
-# 4. FDS API 실행
-./gradlew :services:fds:instances:fds-api:bootRun
+```
+back-end/
+├── build-logic/                 # Gradle convention plugins
+├── common/
+│   ├── common-domain/           # 도메인 공통(Snowflake, Money, Amount, ...)
+│   └── common-application/      # 애플리케이션 공통
+├── infrastructure/
+│   └── kafka/                   # producer/consumer/config/model
+├── services/
+│   ├── transfer/
+│   │   ├── domain/              # Transaction, User, AccountBalance, Validator
+│   │   ├── application/         # TransactionService, 포트 정의
+│   │   ├── infra/               # JPA, Redis, Kafka producer 어댑터
+│   │   └── instances/
+│   │       ├── api/             # Transfer-API (:8080)
+│   │       └── transfer-relay/  # Outbox Relay
+│   └── fds/
+│       ├── domain/              # RiskLog, FraudRule, TransferCompleteEvent
+│       ├── application/         # AnalyzeTransferService, 포트 정의
+│       ├── infra/               # Kafka Streams, JPA 어댑터
+│       └── instances/api/       # FDS-API (:8082)
+├── monitoring/                  # filebeat.yml, prometheus.yml
+├── load-test/                   # k6 시나리오
+└── docs/
+    ├── adr/                     # Architecture Decision Records
+    ├── retrospective/           # 단계별 회고
+    ├── load-test/               # 부하 테스트 분석
+    └── etc/                     # 기술 블로그/메모
 ```
 
-### 전체 시스템 실행
+---
+
+## 실행
+
+### 로컬 (개별 실행)
 
 ```bash
-# 모든 서비스 실행
-docker-compose up -d
+# 1. 인프라
+docker compose up -d postgres kafka schema-registry init-topics redis elasticsearch kibana filebeat
 
-# 로그 확인
-docker-compose logs -f transfer-relay-0
+# 2. Transfer API
+./gradlew :services:transfer:instances:api:bootRun
+
+# 3. FDS API
+./gradlew :services:fds:instances:api:bootRun
+
+# 4. Relay (선택)
+./gradlew :services:transfer:instances:transfer-relay:bootRun
 ```
 
----
+### 컨테이너 (전체)
 
-## 향후 확장 (Phase 2-3)
+```bash
+./gradlew :services:transfer:instances:api:bootJar :services:fds:instances:api:bootJar
+docker compose up -d
+docker compose ps
+```
 
-### Phase 2: FDS 사전 탐지
-- [ ] 동기 검증 (송금 전 차단)
-- [ ] Redis 캐싱 (빠른 룰 체크)
-- [ ] 빠른 패턴 탐지
+### 부하 테스트
 
-### Phase 3: Kafka Streams
-- [ ] 복잡한 패턴 분석 (1분에 5회 송금)
-- [ ] 실시간 윈도우 집계
-- [ ] 이상 패턴 자동 학습
+```bash
+k6 run load-test/vus-100.js
+```
 
-### 장기 계획
-- 지갑 도메인 연동 (OnChain/OffChain)
-- Fraud Score 모델 학습 (AI 모델 내장)
-- CDC 전환 (Debezium)
-- ElasticSearch 연동 (로그 + 탐색용)
+자세한 시나리오는 [`docs/load-test/README.md`](docs/load-test/README.md).
 
 ---
 
-## 설계 원칙
+## 데이터 모델
 
-- 도메인 주도 설계 (DDD)
-- 멀티모듈 아키텍처 기반
-- 도메인별 서비스 분리 (MSA 확장 고려)
-- 트랜잭션 기반 흐름 감지
-- 이벤트 소싱 기반 처리
-- 단계적 개선 (Phase 1 → 2 → 3)
+| 테이블 | 도메인 | 설명 |
+|---|---|---|
+| `users` / `account_balance` | Transfer | 사용자, 잔액 |
+| `transactions` | Transfer | 송금 트랜잭션 본체. `idx_tx_sender_created` 로 RAPID_TRANSFER 룰 쿼리 인덱스 |
+| `transfer_events` | Transfer (Outbox) | 이벤트 발행 큐. MOD 파티셔닝 키 |
+| `fraud_rules` | FDS | 룰 정의 (JSONB threshold) |
+| `fraud_detections` | FDS | 분석 결과 (RiskLog → JPA) |
+| `suspicious_pattern_alerts` | FDS | 10분 윈도우 의심 패턴 알림 |
+| `correction_log` / `dlq_events` | 운영 | 복구/실패 이력 |
+
+전체 ERD: [`docs/ERD.puml`](docs/ERD.puml).
+
+---
+
+## 운영 권한
+
+| Role | 권한 |
+|---|---|
+| `SUPER_ADMIN` | 전체 |
+| `RULE_ADMIN` | 룰 CRUD |
+| `AUDITOR` | 이력 조회 |
+| `OPS_AGENT` | 장애 대응 |
+| `RISK_ANALYST` | 탐지 분석 |
+| `READ_ONLY` | 조회만 |
+
+---
+
+## 다음 마일스톤
+
+- [ ] `JpaRecentTransferCountQueryAdapter` 의 캐시 적용(Redis sliding window)
+- [ ] `AiScoreProvider` 의 ES dense_vector kNN 어댑터 (`docs/etc/ml-anomaly-detection-poc.md` 의 PoC)
+- [ ] WebSocket / Slack 알림 어댑터 (`suspicious_pattern_alerts` 적재 → 푸시)
+- [ ] DLQ Worker + 재처리 정책
+- [ ] CDC 전환 검토 (Debezium vs Outbox 유지)
+- [ ] Cassandra/sharding 평가 (TPS 한계 측정 후)
+
+---
+
+## 문서
+
+- **아키텍처**: [`docs/etc/system-architecture.md`](docs/etc/system-architecture.md), [`docs/etc/현실적인 헥사고날 아키텍처와의 타협.md`](docs/etc/현실적인%20헥사고날%20아키텍처와의%20타협.md)
+- **ADR**: [`docs/adr/README.md`](docs/adr/README.md)
+- **회고**: [`docs/retrospective/README.md`](docs/retrospective/README.md)
+- **부하 테스트**: [`docs/load-test/README.md`](docs/load-test/README.md)
+- **기술 블로그/메모**: [`docs/etc/`](docs/etc/)
+
+---
+
+## 라이선스
+
+MIT. PR/이슈 환영.
