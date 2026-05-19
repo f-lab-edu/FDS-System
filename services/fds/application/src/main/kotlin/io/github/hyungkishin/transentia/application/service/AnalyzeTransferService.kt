@@ -1,6 +1,9 @@
 package io.github.hyungkishin.transentia.application.service
 
+import io.github.hyungkishin.transentia.application.required.AiScoreProvider
 import io.github.hyungkishin.transentia.application.required.FraudRuleRepository
+import io.github.hyungkishin.transentia.application.required.RecentTransferCountQueryPort
+import io.github.hyungkishin.transentia.application.required.RiskAnalysisRepository
 import io.github.hyungkishin.transentia.container.enums.FinalDecisionType
 import io.github.hyungkishin.transentia.container.enums.RuleSeverity
 import io.github.hyungkishin.transentia.container.event.TransferCompleteEvent
@@ -8,13 +11,17 @@ import io.github.hyungkishin.transentia.container.model.FraudeRule
 import io.github.hyungkishin.transentia.container.model.RiskLog
 import io.github.hyungkishin.transentia.container.model.RiskRuleHit
 import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 
 @Service
 class AnalyzeTransferService(
-    private val fraudRuleRepository: FraudRuleRepository
+    private val fraudRuleRepository: FraudRuleRepository,
+    private val recentTransferCountQueryPort: RecentTransferCountQueryPort,
+    private val aiScoreProvider: AiScoreProvider,
+    private val riskAnalysisRepository: RiskAnalysisRepository,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -48,9 +55,12 @@ class AnalyzeTransferService(
             txId = event.eventId,
             decision = decision,
             reasons = reasons,
-            aiScore = null, // TODO: AI 모델은 추후 구현
+            aiScore = aiScoreProvider.score(event),
             ruleHits = ruleHits
         )
+
+        // 분석 결과 영속화 (같은 트랜잭션)
+        riskAnalysisRepository.save(event, riskLog, MDC.get("traceId"))
 
         log.info(
             "@@@@@@@[FDS] 분석 완료 - transferId={}, decision={}, hitCount={}",
@@ -106,13 +116,26 @@ class AnalyzeTransferService(
     }
 
     /**
-     * 단기간 다중 송금 탐지 (추후 구현)
+     * 단기간 다중 송금 탐지
+     * threshold.windowMinutes 분 내 sender 의 송금 횟수가 threshold.maxCount 초과 시 위반.
      */
     private fun checkRapidTransfer(rule: FraudeRule, event: TransferCompleteEvent): RiskRuleHit? {
-        // TODO: 시간 기반 쿼리로 최근 N분 내 송금 횟수 체크
-        println(rule)
-        println(event)
-        return null
+        val windowMinutes = (rule.threshold["windowMinutes"] as? Number)?.toLong() ?: return null
+        val maxCount = (rule.threshold["maxCount"] as? Number)?.toLong() ?: return null
+
+        val since = event.occurredAt.minusSeconds(windowMinutes * 60)
+        val count = recentTransferCountQueryPort.countByUserSince(event.senderId, since)
+
+        return if (count > maxCount) {
+            RiskRuleHit(
+                txId = event.eventId,
+                ruleCode = "RAPID_TRANSFER",
+                severity = RuleSeverity.HIGH,
+                weight = rule.weight.toInt(),
+                reason = "최근 ${windowMinutes}분 내 송금 ${count}건 > 임계치 ${maxCount}건",
+                occurredAt = Instant.now()
+            )
+        } else null
     }
 
     /**

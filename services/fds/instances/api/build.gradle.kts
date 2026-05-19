@@ -11,6 +11,7 @@ dependencyManagement {
 
 dependencies {
     implementation(project(":fds-application"))
+    implementation(project(":fds-domain"))
     implementation(project(":fds-infra"))
     implementation(project(":common-application"))
     implementation(project(":common-domain"))
@@ -21,6 +22,9 @@ dependencies {
     // Spring Cloud Stream - 직접 추가
     implementation("org.springframework.cloud:spring-cloud-stream")
     implementation("org.springframework.cloud:spring-cloud-stream-binder-kafka-streams")
+
+    // suspicious-patterns 토픽 일반 @KafkaListener 용
+    implementation("org.springframework.kafka:spring-kafka")
 
     implementation("io.confluent:kafka-avro-serializer:7.9.2")
     testImplementation("org.springframework.boot:spring-boot-starter-test")

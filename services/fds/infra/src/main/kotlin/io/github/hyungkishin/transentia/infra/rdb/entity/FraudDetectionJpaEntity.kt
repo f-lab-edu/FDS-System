@@ -12,7 +12,7 @@ import java.time.Instant
     indexes = [
         Index(name = "idx_fraud_detections_event_id", columnList = "event_id"),
         Index(name = "idx_fraud_detections_from_account", columnList = "from_account_id, detected_at"),
-        Index(name = "idx_fraud_detections_action", columnList = "action, detected_at")
+        Index(name = "idx_fraud_detections_action", columnList = "action_type, detected_at")
     ]
 )
 class FraudDetectionJpaEntity(
@@ -39,7 +39,8 @@ class FraudDetectionJpaEntity(
     @Column(name = "total_risk_score", nullable = false)
     val totalRiskScore: Int,
 
-    @Column(name = "status", nullable = false, length = 20)
+    @Column(name = "action_type", nullable = false, length = 20)
+    @Enumerated(EnumType.STRING)
     val actionType: ActionType,
 
     @Type(JsonBinaryType::class)
