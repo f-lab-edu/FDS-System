@@ -15,6 +15,11 @@ dependencies {
     implementation("io.confluent:kafka-avro-serializer:7.9.2")
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
 
+    // Resilience4j — Circuit Breaker / Retry / Bulkhead / TimeLimiter
+    implementation("io.github.resilience4j:resilience4j-spring-boot3:2.2.0")
+    implementation("io.github.resilience4j:resilience4j-micrometer:2.2.0")
+    implementation("org.springframework.boot:spring-boot-starter-aop")
+
     // Testcontainers 통합 테스트
     testImplementation(platform("org.testcontainers:testcontainers-bom:1.20.4"))
     testImplementation("org.testcontainers:testcontainers")
