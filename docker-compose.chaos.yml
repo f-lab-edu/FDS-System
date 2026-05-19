@@ -1,0 +1,37 @@
+# ============================================
+# Chaos engineering 오버레이
+# ============================================
+# 사용:
+#   docker compose -f docker-compose.yml -f docker-compose.chaos.yml up -d
+#
+# Toxiproxy 가 Redis 와 PostgreSQL 앞단에 위치.
+# 애플리케이션은 toxiproxy 의 listen 포트로 연결하여
+# 런타임에 latency / cut / bandwidth / slow_close toxic 주입 가능.
+#
+# E3 (Redis CB) 실측이 이 오버레이로 가능해진다.
+
+services:
+  toxiproxy:
+    image: ghcr.io/shopify/toxiproxy:2.9.0
+    container_name: transfer-toxiproxy
+    restart: unless-stopped
+    ports:
+      - "8474:8474"      # toxiproxy admin API
+      - "26379:26379"    # redis proxy
+      - "25432:25432"    # postgres proxy
+    command:
+      - "-host=0.0.0.0"
+      - "-config=/etc/toxiproxy/proxies.json"
+    volumes:
+      - ./monitoring/toxiproxy/proxies.json:/etc/toxiproxy/proxies.json
+
+  # Redis 와 Postgres 의 외부 노출 포트를 toxiproxy 통해서만 접근하도록
+  # 애플리케이션 컨테이너의 REDIS_HOST 를 toxiproxy 로 오버라이드.
+  transfer-api:
+    environment:
+      REDIS_HOST: toxiproxy
+      REDIS_PORT: "26379"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://toxiproxy:25432/transfer
+    depends_on:
+      toxiproxy:
+        condition: service_started
