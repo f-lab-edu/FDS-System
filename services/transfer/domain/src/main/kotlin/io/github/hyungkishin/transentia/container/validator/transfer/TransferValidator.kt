@@ -10,17 +10,18 @@ object TransferValidator {
     /**
      * 송금 가능성 전체 검증
      * 실패 시 즉시 예외 발생 (fail-fast)
+     * @param dailyAccumulated 송신자의 오늘 누적 송금액(rawValue). 캐시에서 조회 후 주입.
      */
-    fun validate(sender: User, receiver: User, amount: Amount) {
+    fun validate(sender: User, receiver: User, amount: Amount, dailyAccumulated: Long = 0L) {
         validateAmount(amount)
-        validateSender(sender, amount)
+        validateSender(sender, amount, dailyAccumulated)
         validateReceiver(receiver)
     }
 
     /**
      * 송신자 검증
      */
-    fun validateSender(sender: User, amount: Amount) {
+    fun validateSender(sender: User, amount: Amount, dailyAccumulated: Long = 0L) {
         // 1. 블랙리스트 체크
         if (sender.isBlacklisted()) {
             throw DomainException(
@@ -29,13 +30,13 @@ object TransferValidator {
             )
         }
 
-        // 2. 일일 한도 체크 TODO : redis cache 를 사용해야 할까 ?
-//        if (!sender.validateTransferAmount(amount)) {
-//            throw DomainException(
-//                CommonError.InvalidArgument("daily_limit_exceeded"),
-//                "일일 송금 한도(${sender.dailyTransferLimit})를 초과했습니다"
-//            )
-//        }
+        // 2. 일일 한도 체크 (오늘 누적치 + 이번 요청 금액 ≤ 한도)
+        if (!sender.validateTransferAmount(amount, dailyAccumulated)) {
+            throw DomainException(
+                CommonError.InvalidArgument("daily_limit_exceeded"),
+                "일일 송금 한도(${sender.dailyTransferLimit})를 초과했습니다"
+            )
+        }
 
         // 3. 잔액 체크
         if (!sender.accountBalance.hasEnoughBalance(amount)) {

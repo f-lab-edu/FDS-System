@@ -61,17 +61,14 @@ class User private constructor(
         status == UserStatus.ACTIVE && !isTransferLocked
 
     /**
-     * 송금 금액 검증 (일일 한도)
-     * TODO: 실제 일일 누적액 계산은 Redis/DB 캐시를 참고해야 함
+     * 송금 금액 검증 (일일 한도). dailyAccumulated 는 외부 캐시에서 조회한 오늘 누적 송금액(rawValue).
      */
-    fun validateTransferAmount(amount: Amount): Boolean {
-        // 통화 불일치 검증
+    fun validateTransferAmount(amount: Amount, dailyAccumulated: Long = 0L): Boolean {
         if (accountBalance.balance.currency != amount.currency) {
             return false
         }
-
-        // 한도 검증 (DailyTransferLimit.value는 KRW 기준 long 값이라고 가정)
-        return amount.money.rawValue <= dailyTransferLimit.value * Currency.KRW.scaleFactor
+        val limitRaw = dailyTransferLimit.value * Currency.KRW.scaleFactor
+        return (dailyAccumulated + amount.money.rawValue) <= limitRaw
     }
 
     /** 차단 사유 반환 */

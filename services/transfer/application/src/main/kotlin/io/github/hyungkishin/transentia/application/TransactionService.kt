@@ -2,6 +2,7 @@ package io.github.hyungkishin.transentia.application
 
 import io.github.hyungkishin.transentia.application.provided.TransactionRegister
 import io.github.hyungkishin.transentia.application.provided.command.TransferRequestCommand
+import io.github.hyungkishin.transentia.application.required.DailyTransferAmountCachePort
 import io.github.hyungkishin.transentia.application.required.TransactionRepository
 import io.github.hyungkishin.transentia.application.required.UserRepository
 import io.github.hyungkishin.transentia.application.required.command.TransferResponseCommand
@@ -24,6 +25,7 @@ class TransactionService(
     private val userRepository: UserRepository,
     private val idGenerator: IdGenerator,
     private val eventPublisher: ApplicationEventPublisher,
+    private val dailyTransferAmountCache: DailyTransferAmountCachePort,
 ) : TransactionRegister {
 
     @Transactional
@@ -31,8 +33,9 @@ class TransactionService(
         val (sender, receiver) = loadUsers(command)
         val amount = command.amount()
 
-        // LocalRule ( 송금자/수신자 블랙리스트, 일일 송금액) 적용
-        TransferValidator.validate(sender, receiver, amount)
+        // LocalRule (송금자/수신자 블랙리스트, 일일 송금액) 적용
+        val dailyAccumulated = dailyTransferAmountCache.getTodayAmount(sender.id.value)
+        TransferValidator.validate(sender, receiver, amount, dailyAccumulated)
 
         val transaction = Transaction.of(
             SnowFlakeId(idGenerator.nextId()),
@@ -49,6 +52,9 @@ class TransactionService(
         val savedTransaction = transactionRepository.save(transaction)
 
         val completeEvent = transaction.complete()
+
+        // 일일 누적치 갱신 (트랜잭션 커밋 전이지만 캐시는 over-estimate 가 under 보다 안전)
+        dailyTransferAmountCache.addTodayAmount(sender.id.value, amount.money.rawValue)
 
         // 이벤트 발행 (커밋 후 별도 스레드에서 Kafka 전송 시도) - @see TransferOutboxEventHandler
         // Kafka 전송 실패 시 Outbox 저장 - @see KafkaTransferEventPublisher
