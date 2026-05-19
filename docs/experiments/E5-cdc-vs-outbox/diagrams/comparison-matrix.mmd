@@ -1,0 +1,48 @@
+%% E5 Comparison Matrix
+%% TPS 부하별 outbox-polling vs cdc-debezium 의 lag / DB CPU 예상 곡선 (가설)
+%% 실측 미수행. 모든 값은 ADR-010 의 결정 매트릭스를 정량으로 풀어 적은 추정.
+
+flowchart TB
+    subgraph LEGEND["범례"]
+        L1["O = outbox-polling (현재 Phase 1)"]
+        L2["C = cdc-debezium (Phase 3 예정)"]
+        L3["굵은 테두리 = Phase 전환 트리거 임계"]
+    end
+
+    subgraph TPS100["TPS 100 — 두 방식 모두 여유"]
+        O100["O — lag p99 약 1초<br/>DB CPU 15%<br/>polling interval 이 하한"]
+        C100["C — lag p99 약 100ms<br/>DB CPU 8%<br/>이득은 있으나 결정 사유 약함"]
+    end
+
+    subgraph TPS500["TPS 500 — 안정 구간"]
+        O500["O — lag p99 약 2초<br/>DB CPU 35%<br/>빈 배치 폴링이 줄면서 안정"]
+        C500["C — lag p99 약 150ms<br/>DB CPU 18%"]
+    end
+
+    subgraph TPS1K["TPS 1,000 — 결정의 경계"]
+        O1K["O — lag p99 약 5초<br/>DB CPU 65%<br/>Phase 2 트리거 warning"]
+        C1K["C — lag p99 약 200ms<br/>DB CPU 30%<br/>이득 80% lag, 53% CPU"]
+    end
+
+    subgraph TPS5K["TPS 5,000 — Outbox 발산"]
+        O5K["O — lag 발산 (처리 불가)<br/>DB CPU 95%+ saturate<br/>이론 상한 초과"]
+        C5K["C — lag p99 약 500ms<br/>DB CPU 55%<br/>Connect throughput 이 다음 변수"]
+    end
+
+    subgraph TRIGGER["ADR-010 의 전환 트리거 매핑"]
+        T1["TPS 500~1K 구간<br/>= Phase 2 튜닝 진입"]
+        T2["TPS 1K~3K 구간<br/>= Phase 3 CDC PoC 시작"]
+        T3["TPS 3K+ 구간<br/>= Phase 3 전환 강제"]
+    end
+
+    LEGEND --> TPS100
+    TPS100 --> TPS500
+    TPS500 --> TPS1K
+    TPS1K --> TPS5K
+    TPS5K --> TRIGGER
+
+    style O1K stroke:#d33,stroke-width:3px
+    style O5K stroke:#d33,stroke-width:3px
+    style C1K stroke:#36c,stroke-width:3px
+    style T2 stroke:#d33,stroke-width:2px
+    style T3 stroke:#d33,stroke-width:3px
