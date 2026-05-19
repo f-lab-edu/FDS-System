@@ -61,4 +61,11 @@ interface TransferEventsOutboxRepository {
      * 현재 DEAD_LETTER 인 row 수 — 메트릭/알림용.
      */
     fun countDeadLetters(): Long
+
+    /**
+     * PUBLISHED 상태 row 중 olderThan 보다 오래된 것을 archive 테이블로
+     * 이동하고 원본 삭제. 같은 트랜잭션 안에서 처리.
+     * @return archive 한 row 수.
+     */
+    fun archivePublished(olderThan: Instant, limit: Int): Int
 }

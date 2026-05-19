@@ -207,6 +207,55 @@ class TransferEventsOutboxJdbcRepository(
         ) ?: 0L
     }
 
+    /**
+     * Archive: PUBLISHED + published_at <= olderThan 인 row 를
+     * INSERT … SELECT 후 같은 트랜잭션에서 DELETE.
+     * 외부에서 @Transactional 보장 가정.
+     */
+    override fun archivePublished(olderThan: Instant, limit: Int): Int {
+        val insertSql = """
+            WITH picked AS (
+                SELECT event_id FROM transfer_events
+                WHERE status = 'PUBLISHED' AND published_at <= :olderThan
+                ORDER BY published_at ASC
+                LIMIT :limit
+                FOR UPDATE SKIP LOCKED
+            )
+            INSERT INTO transfer_events_archive
+              (event_id, event_version, aggregate_type, event_type, payload, headers,
+               status, attempt_count, error_message, created_at, updated_at, published_at)
+            SELECT
+              e.event_id, e.event_version, e.aggregate_type, e.event_type, e.payload, e.headers,
+              e.status::text, e.attempt_count, e.error_message, e.created_at, e.updated_at, e.published_at
+            FROM transfer_events e JOIN picked p ON p.event_id = e.event_id
+            ON CONFLICT (event_id) DO NOTHING
+        """.trimIndent()
+
+        val inserted = jdbc.update(
+            insertSql, mapOf(
+                "olderThan" to Timestamp.from(olderThan),
+                "limit" to limit,
+            )
+        )
+        if (inserted == 0) return 0
+
+        val deleteSql = """
+            DELETE FROM transfer_events
+            WHERE event_id IN (
+              SELECT event_id FROM transfer_events_archive
+              WHERE archived_at >= :now AND published_at <= :olderThan
+            )
+        """.trimIndent()
+
+        jdbc.update(
+            deleteSql, mapOf(
+                "now" to Timestamp.from(olderThan.minusSeconds(0)), // archive 직후
+                "olderThan" to Timestamp.from(olderThan),
+            )
+        )
+        return inserted
+    }
+
     private val claimedRowMapper = RowMapper { rs, _ ->
         ClaimedRow(
             eventId = rs.getLong("event_id"),
