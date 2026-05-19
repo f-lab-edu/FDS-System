@@ -121,6 +121,26 @@ services:
       - '--storage.tsdb.retention.time=30d'
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      - alertmanager
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: transfer-alertmanager
+    restart: unless-stopped
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager/config.yml:/etc/alertmanager/alertmanager.yml
+      - alertmanager_data:/alertmanager
+    environment:
+      # 운영에선 docker secret 또는 외부 secret manager 사용.
+      # 데모: 빈 파일로 두면 Slack 전송 실패만 로그에 남고 alertmanager 자체는 동작.
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
 
   grafana:
     image: grafana/grafana:latest
@@ -243,6 +263,7 @@ volumes:
   pg_data:
   kafka_data:
   prometheus_data:
+  alertmanager_data:
   grafana_data:
   es_data:
 

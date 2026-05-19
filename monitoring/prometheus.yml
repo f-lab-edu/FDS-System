@@ -5,6 +5,11 @@ global:
 rule_files:
   - /etc/prometheus/prometheus-alerts.yml
 
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
 scrape_configs:
   # Transfer API
   - job_name: 'transfer-api'
