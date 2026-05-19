@@ -1,4 +1,16 @@
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: transfer-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   postgres:
     image: postgres:15
     container_name: transfer-postgres
@@ -153,6 +165,63 @@ services:
     depends_on:
       elasticsearch:
         condition: service_healthy
+
+  transfer-api:
+    build:
+      context: ./services/transfer/instances/api
+      dockerfile: Dockerfile
+    container_name: transfer-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      LOG_PATH: /var/log/apps
+      SNOWFLAKE_NODE_ID: 1
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+    volumes:
+      - ./logs:/var/log/apps
+    depends_on:
+      kafka:
+        condition: service_healthy
+      schema-registry:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  fds-api:
+    build:
+      context: ./services/fds/instances/api
+      dockerfile: Dockerfile
+    container_name: fds-api
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      LOG_PATH: /var/log/apps
+    volumes:
+      - ./logs:/var/log/apps
+    depends_on:
+      kafka:
+        condition: service_healthy
+      schema-registry:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8082/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   filebeat:
     image: docker.elastic.co/beats/filebeat:8.11.0

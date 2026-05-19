@@ -1,0 +1,22 @@
+# ============================================
+# Docker 환경용 설정 (컨테이너 네트워크 주소)
+# ============================================
+spring:
+  datasource:
+    url: jdbc:postgresql://host.docker.internal:5432/transfer
+
+  cloud:
+    stream:
+      kafka:
+        streams:
+          binder:
+            configuration:
+              schema.registry.url: http://schema-registry:8081
+            brokers: kafka:9092
+
+kafka-config:
+  bootstrap-servers: kafka:9092
+  schema-registry-url: http://schema-registry:8081
+
+logging:
+  config: classpath:logback-spring.xml
