@@ -11,6 +11,7 @@
 | [E2](E2-locking-strategy/) | 낙관락 → 비관락 | ✅ RUN | 부하 시 에러율 50%p 감소 | H1 ✓ (62%p) / H2 ✓ (latency 2배 — 감수) / H3 ✓ (데드락 0) | [ADR-002](../adr/ADR-002-transactional-outbox-pattern.md) |
 | [E3](E3-circuit-breaker/) | Redis CB chaos | ⏸ NOT YET RUN | CB 적용 시 p95 < 200ms 유지 | 추정 / chaos 도구 부재 | [ADR-005](../adr/ADR-005-redis-daily-limit-cache.md) |
 | [E4](E4-load-baseline/) | k6 부하 베이스라인 | ✅ RUN (단발) | VU=10 선형, 50+ sublinear | 단일 인스턴스 한계 측정 | [DECISIONS-TIMELINE Stage 6](../DECISIONS-TIMELINE.md) |
+| [E5](E5-cdc-vs-outbox/) | CDC vs Outbox 처리량/지연 | ⏸ NOT YET RUN | CDC 가 lag p99 80%↓, DB CPU 30%↓ | 추정 / Debezium PoC 부재 | [ADR-010](../adr/ADR-010-async-event-publishing-evolution.md) |
 
 ## 실험 방법론
 

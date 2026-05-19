@@ -14,6 +14,8 @@
 | [006](ADR-006-elk-observability.md) | ELK 기반 관측성 + AccessLog 분리 | Accepted | Filebeat input 2 분리, `app-logs-*` / `access-logs-*` |
 | [007](ADR-007-distributed-tracing-context-propagation.md) | 분산 트레이싱 컨텍스트 전파 | Accepted | Micrometer Observation + `ContextPropagatingTaskDecorator` + `TracingTransformer` |
 | [008](ADR-008-build-logic-convention-plugins.md) | buildSrc → build-logic 이관 | Accepted | Gradle included build + convention plugin |
+| [009](ADR-009-experiment-driven-decisions.md) | 실험 주도 의사결정 | Accepted | `docs/experiments/EN-*/` 4종 문서 표준 (DESIGN/RESULTS/RETRO/diagrams) |
+| [010](ADR-010-async-event-publishing-evolution.md) | 비동기 이벤트 발행 진화 | Accepted (P1) / Proposed (P2~5) | 트래픽 레벨별 Outbox→CDC→TxProducer→ES 진화, 전환 트리거 메트릭 |
 
 ## ADR 작성 규칙
 
