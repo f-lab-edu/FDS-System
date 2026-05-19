@@ -1,0 +1,45 @@
+%% 낙관락 retry storm vs 비관락 정렬 락 비교
+%% 측정 회차: 2025-11-22 (낙관락) / 2025-11-23 (비관락), VU=5, simple-test.js
+%% 시나리오: 두 VU가 거의 동시에 같은 계좌(A=110-100-000001)에서 출금
+
+%% =====================================================
+%% [1] 낙관락 — @Version 충돌 도미노
+%% =====================================================
+sequenceDiagram
+    autonumber
+    participant VU1 as VU1
+    participant VU2 as VU2
+    participant API as Transfer API
+    participant DB as Postgres (account A, @Version=7)
+
+    Note over VU1,DB: 낙관락 — 두 VU가 같은 시간 창에 진입
+
+    VU1->>API: POST /transfers (A -> B)
+    activate API
+    API->>DB: SELECT * FROM account_balance WHERE id=A
+    DB-->>API: row { balance=1000, version=7 }
+
+    VU2->>API: POST /transfers (A -> C)
+    activate API
+    API->>DB: SELECT * FROM account_balance WHERE id=A
+    DB-->>API: row { balance=1000, version=7 }
+
+    Note over API,DB: 두 트랜잭션 모두 version=7 을 들고 있다
+
+    API->>DB: UPDATE account_balance<br/>SET balance=900, version=8<br/>WHERE id=A AND version=7
+    DB-->>API: 1 row affected (VU1 성공)
+
+    API->>DB: UPDATE account_balance<br/>SET balance=900, version=8<br/>WHERE id=A AND version=7
+    DB-->>API: 0 row affected (version 이미 8)
+    DB--xAPI: StaleObjectStateException
+    API--xVU2: 500 Row was updated or deleted<br/>by another transaction
+    deactivate API
+
+    API-->>VU1: 200 OK
+    deactivate API
+
+    Note over VU1,DB: 실측 (k6-output.log 2025-11-22):<br/>VU=5에서 80% 실패 — 도미노 효과<br/>매 시점 동시 진행 4건, 1건 성공 시 3건 stale
+
+%% =====================================================
+%% [2] 비관락 + 정렬된 락 획득
+%% =====================================================

@@ -1,0 +1,16 @@
+%% E1 Results Diagram
+%% 결과: H1 ✓ (99.0% 감소), H2 ✓ (33.3% 균등), H3 ✓ (+12.7%, 15% 임계치 안)
+%% 가장 큰 발견: Instance 2 의 빈 배치 1,658회 (가설에 없던 변수)
+
+quadrantChart
+    title "트레이드오프 정량화 — 비용 vs 이득"
+    x-axis "비용 작음" --> "비용 큼"
+    y-axis "이득 작음" --> "이득 큼"
+    quadrant-1 "채택"
+    quadrant-2 "재검토"
+    quadrant-3 "기각"
+    quadrant-4 "보류"
+    "MOD 파티셔닝 (After)": [0.35, 0.85]
+    "단순 SKIP LOCKED (Before)": [0.20, 0.25]
+    "함수 인덱스 (후속)": [0.55, 0.90]
+    "Consistent Hashing (E1-2)": [0.70, 0.65]

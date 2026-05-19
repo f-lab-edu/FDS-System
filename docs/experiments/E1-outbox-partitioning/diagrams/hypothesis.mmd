@@ -1,0 +1,55 @@
+%% E1 Hypothesis Diagram
+%% 실험 설계: 3 인스턴스 동시 폴링에서 SKIP LOCKED vs MOD 파티셔닝 비교
+%% H1 (DB 쿼리 ≥90% 감소), H2 (분배 33.3% ± 1%), H3 (처리시간 ≤15% 증가)
+
+flowchart TB
+    subgraph CONTROL["통제 변수"]
+        C1["이벤트 10,000건"]
+        C2["배치 1,000건"]
+        C3["인스턴스 3대"]
+        C4["PG 15 / M1 Pro"]
+    end
+
+    subgraph BEFORE["Before — 단순 SKIP LOCKED"]
+        B0["Instance 0"]
+        B1["Instance 1"]
+        B2["Instance 2"]
+        BQ["동일 쿼리<br/>WHERE status='PENDING'"]
+        BDB[("transfer_events")]
+        B0 --> BQ
+        B1 --> BQ
+        B2 --> BQ
+        BQ --> BDB
+        BDB -. "락 경합 + 빈 배치 폭증" .-> BR["불균등 분배<br/>+ 의미 없는 SELECT"]
+    end
+
+    subgraph AFTER["After — MOD 파티셔닝"]
+        A0["Instance 0<br/>MOD 3 = 0"]
+        A1["Instance 1<br/>MOD 3 = 1"]
+        A2["Instance 2<br/>MOD 3 = 2"]
+        ADB[("transfer_events")]
+        A0 --> ADB
+        A1 --> ADB
+        A2 --> ADB
+        ADB -. "쿼리 차원 분리" .-> AR["33.3% 균등<br/>+ 빈 배치 0회"]
+    end
+
+    subgraph HYPOTHESIS["가설"]
+        H1["H1: 총 DB 쿼리 ≥ 90% 감소"]
+        H2["H2: 처리 분포 33.3% ± 1%"]
+        H3["H3: 총 처리 시간 ≤ +15%<br/>(트레이드오프 감수)"]
+    end
+
+    CONTROL --> BEFORE
+    CONTROL --> AFTER
+    BR --> H1
+    BR --> H2
+    AR --> H1
+    AR --> H2
+    AR --> H3
+
+    style BEFORE fill:#fde2e2,stroke:#c0392b
+    style AFTER fill:#d5f5e3,stroke:#27ae60
+    style HYPOTHESIS fill:#fef5e7,stroke:#f39c12
+    style BR fill:#f5b7b1
+    style AR fill:#abebc6
