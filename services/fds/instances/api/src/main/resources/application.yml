@@ -99,6 +99,20 @@ spring:
 fds:
   ai:
     score-provider: heuristic
+  alert:
+    slack:
+      # 운영에선 .env / k8s Secret 로 주입. 비어 있으면 NoOp 어댑터 활성.
+      webhook-url: ${SLACK_WEBHOOK_URL:}
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      slack:
+        sliding-window-size: 20
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
 
 # ============================================
 # Logging 설정

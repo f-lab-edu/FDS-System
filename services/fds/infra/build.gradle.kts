@@ -31,6 +31,11 @@ dependencies {
     // ML 어댑터의 메트릭 노출용
     implementation("io.micrometer:micrometer-core")
 
+    // Slack 알림 어댑터 — RestClient (spring-web) + Resilience4j CB
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("io.github.resilience4j:resilience4j-spring-boot3:2.2.0")
+    implementation("org.springframework.boot:spring-boot-starter-aop")
+
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.kafka:spring-kafka-test")
     testImplementation(platform("org.testcontainers:testcontainers-bom:1.20.4"))
