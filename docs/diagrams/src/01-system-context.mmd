@@ -1,0 +1,27 @@
+flowchart LR
+    Web[웹 클라이언트]:::client
+    Mobile[모바일]:::client
+    Admin[운영자 콘솔]:::client
+
+    Web --> Nginx
+    Mobile --> Nginx
+    Admin --> Nginx
+
+    subgraph Transentia[Transentia 백엔드]
+        Nginx[Nginx Load Balancer]:::infra
+        TransferAPI[Transfer-API :8080<br/>송금/계좌 관리]:::svc
+        FdsAPI[FDS-API :8082<br/>이상거래 탐지]:::svc
+        Relay[Transfer-Relay<br/>Outbox 발행]:::svc
+    end
+
+    Nginx -->|/api/transfers| TransferAPI
+    Nginx -->|/api/fds| FdsAPI
+    TransferAPI -.->|outbox| Relay
+
+    Bank[(은행 정산망<br/>미구현)]:::external
+    TransferAPI -.->|placeholder| Bank
+
+    classDef client fill:#dbeafe,stroke:#1e40af,color:#1e3a8a
+    classDef svc fill:#dcfce7,stroke:#15803d,color:#14532d
+    classDef infra fill:#fef3c7,stroke:#a16207,color:#713f12
+    classDef external fill:#f3f4f6,stroke:#6b7280,color:#374151,stroke-dasharray: 5 5

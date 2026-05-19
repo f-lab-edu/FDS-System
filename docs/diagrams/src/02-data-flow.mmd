@@ -1,0 +1,39 @@
+flowchart LR
+    Client[클라이언트]:::client
+    TransferAPI[Transfer-API]:::svc
+    PG[(PostgreSQL<br/>transactions / users)]:::store
+    Outbox[(transfer_events<br/>Outbox)]:::store
+    Redis[(Redis<br/>daily limit cache)]:::store
+    Relay[Transfer-Relay<br/>Spring Batch]:::svc
+    Kafka{{Kafka<br/>transfer-transaction-events}}:::queue
+
+    FdsA[Kafka Streams A<br/>processTransferEvents]:::stream
+    FdsB[Kafka Streams B<br/>detectSuspiciousPatterns<br/>10분 윈도우]:::stream
+    Listener[KafkaListener<br/>SuspiciousPatternAlertConsumer]:::svc
+    FraudDB[(fraud_detections)]:::store
+    AlertsDB[(suspicious_pattern_alerts)]:::store
+
+    AnalysisTopic{{fds-analysis-results}}:::queue
+    SuspiciousTopic{{suspicious-patterns}}:::queue
+
+    Client -->|HTTP POST /transfer| TransferAPI
+    TransferAPI -->|@Transactional| PG
+    TransferAPI -->|@Transactional| Outbox
+    TransferAPI -->|INCRBY| Redis
+    Outbox -->|MOD partition + SKIP LOCKED| Relay
+    Relay -->|Avro produce| Kafka
+    TransferAPI -->|동기 send 성공 케이스| Kafka
+
+    Kafka --> FdsA
+    Kafka --> FdsB
+    FdsA -->|JPA save| FraudDB
+    FdsA -->|publish| AnalysisTopic
+    FdsB -->|publish| SuspiciousTopic
+    SuspiciousTopic --> Listener
+    Listener -->|JPA save| AlertsDB
+
+    classDef client fill:#dbeafe,stroke:#1e40af,color:#1e3a8a
+    classDef svc fill:#dcfce7,stroke:#15803d,color:#14532d
+    classDef store fill:#fee2e2,stroke:#b91c1c,color:#7f1d1d
+    classDef queue fill:#fef3c7,stroke:#a16207,color:#713f12
+    classDef stream fill:#e0e7ff,stroke:#4f46e5,color:#312e81

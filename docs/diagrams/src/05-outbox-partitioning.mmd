@@ -1,0 +1,26 @@
+flowchart TB
+    subgraph Before[Before: 파티셔닝 없음 — 빈 배치 폭발]
+        IB0[Instance 0]:::bad
+        IB1[Instance 1]:::bad
+        IB2[Instance 2]:::bad
+        OB[(transfer_events<br/>PENDING)]:::store
+        IB0 -->|"SELECT ... LIMIT 1000 FOR UPDATE SKIP LOCKED"| OB
+        IB1 -->|"같은 쿼리"| OB
+        IB2 -->|"같은 쿼리"| OB
+        OB -->|"30/30/20 불균등<br/>Instance 2: 빈 배치 1,658회"| Bad[총 1,673회 쿼리]:::bad
+    end
+
+    subgraph After[After: MOD 파티셔닝 — 락 경합 0]
+        IA0[Instance 0<br/>MOD event_id 3 = 0]:::good
+        IA1[Instance 1<br/>MOD event_id 3 = 1]:::good
+        IA2[Instance 2<br/>MOD event_id 3 = 2]:::good
+        OA[(transfer_events<br/>PENDING)]:::store
+        IA0 -->|파티션 0| OA
+        IA1 -->|파티션 1| OA
+        IA2 -->|파티션 2| OA
+        OA -->|33.3/33.3/33.3<br/>균등 분배| Good[총 17회 쿼리<br/>99% 감소]:::good
+    end
+
+    classDef bad fill:#fee2e2,stroke:#b91c1c,color:#7f1d1d
+    classDef good fill:#dcfce7,stroke:#15803d,color:#14532d
+    classDef store fill:#fef3c7,stroke:#a16207,color:#713f12
