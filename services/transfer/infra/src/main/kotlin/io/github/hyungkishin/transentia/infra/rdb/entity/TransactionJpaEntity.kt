@@ -38,7 +38,6 @@ class TransactionJpaEntity(
     val amount: Long,
 
     @Column(name = "currency", nullable = false)
-    // TODO : Enum 고려
     @Enumerated(EnumType.STRING)
     val currency: Currency,
 
@@ -84,7 +83,9 @@ class TransactionJpaEntity(
                 status = domain.status,
                 amount = domain.amount.money.rawValue,
                 currency = domain.amount.currency,
-                receivedAt = domain.createdAt // TODO : 확인
+                // NOTE: Transaction 도메인에 receivedAt 개념이 없어 createdAt 으로 대체한다.
+                // 추후 입금 처리 완료 시각을 도메인 모델에 분리하려면 Transaction.receivedAt 필드를 추가하고 수신측 적재 시점에 set 한다.
+                receivedAt = domain.createdAt
             )
     }
 
