@@ -161,3 +161,81 @@ groups:
         annotations:
           summary: "Kafka consumer lag {{ $value }} 건 ({{ $labels.client_id }})"
           description: "FDS 분석 지연. 처리 토픽 partition 수 / consumer thread 수 점검."
+
+  # ============================================
+  # Phase 전환 트리거 (ADR-010 / EVOLUTION-ROADMAP)
+  # 운영자에게 다음 phase 로 진화할 시점을 알린다.
+  # ============================================
+  - name: transentia-phase-evolution
+    interval: 1m
+    rules:
+      - alert: PhaseEvolution_OutboxPendingHigh
+        expr: outbox_pending_count > 500
+        for: 1h
+        labels:
+          severity: warning
+          team: backend
+          phase_transition: "1-to-2"
+        annotations:
+          summary: "Outbox PENDING p95 > 500 sustained 1h ({{ $value }})"
+          description: "Phase 1 의 폴링 빈도가 트래픽을 따라가지 못함. EVOLUTION-ROADMAP 의 Phase 2 (Polling 튜닝 — 인스턴스 3→5, 폴링 1s→200ms, 배치 1K→5K) 검토 시점. ROI 최고 (작업 1주)."
+
+      - alert: PhaseEvolution_OutboxLagHigh
+        expr: outbox_oldest_pending_seconds > 5
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+          phase_transition: "1-to-2"
+        annotations:
+          summary: "Outbox 최고령 PENDING > 5s sustained ({{ $value }}s)"
+          description: "Phase 2 튜닝 즉시 적용 권장. ADR-010 의 전환 트리거 기준."
+
+      - alert: PhaseEvolution_ConsiderCDC
+        expr: outbox_oldest_pending_seconds > 30
+        for: 10m
+        labels:
+          severity: critical
+          team: backend
+          phase_transition: "2-to-3"
+        annotations:
+          summary: "Outbox 최고령 PENDING p99 > 30s ({{ $value }}s) — Phase 3 CDC 검토"
+          description: "Polling 튜닝(Phase 2)의 한계 도달 가능성. EVOLUTION-ROADMAP 의 Phase 3 (Debezium CDC PoC) 시작 시점. E5 실험 패키지 실행 필요. 작업 1~2달."
+
+      - alert: PhaseEvolution_DBCpuFromPolling
+        expr: |
+          (
+            rate(pg_stat_statements_total_time_seconds{query=~".*transfer_events.*PENDING.*"}[5m])
+            /
+            rate(pg_stat_statements_total_time_seconds[5m])
+          ) > 0.30
+        for: 30m
+        labels:
+          severity: warning
+          team: backend
+          phase_transition: "2-to-3"
+        annotations:
+          summary: "DB CPU 의 {{ $value | humanizePercentage }} 가 outbox 폴링"
+          description: "Phase 3 (CDC) 전환 트리거. 폴링 부하 자체가 DB 의 주된 부담이 된 상태. NOTE: pg_stat_statements exporter 셋업 필요."
+
+      - alert: PhaseEvolution_ConsiderTxProducer
+        expr: rate(kafka_producer_record_send_total[5m]) > 10000
+        for: 30m
+        labels:
+          severity: info
+          team: backend
+          phase_transition: "3-to-4"
+        annotations:
+          summary: "Kafka producer rate > 10K/s sustained 30m"
+          description: "Phase 4 (Kafka Transactional Producer + Outbox 제거) 검토. p99 latency 요구가 100ms 이하라면 즉시. EVOLUTION-ROADMAP Phase 4."
+
+      - alert: PhaseEvolution_KafkaConnectSlotLag
+        expr: pg_replication_slot_lag_bytes > 1073741824   # 1 GB
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+          phase: "3"
+        annotations:
+          summary: "PostgreSQL replication slot lag > 1GB ({{ $value }} bytes)"
+          description: "Phase 3 (CDC) 운영 중 Debezium 의 slot 이 따라가지 못함. WAL 디스크 폭증 위험. Connect 클러스터 즉시 점검. NOTE: postgres_exporter 셋업 필요."

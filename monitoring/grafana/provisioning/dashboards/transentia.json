@@ -93,23 +93,51 @@
       "fieldConfig": {"defaults": {"unit": "s"}}
     },
     {
-      "title": "Outbox PENDING 건수",
+      "title": "Outbox PENDING 건수 (Phase 전환 임계 표시)",
       "type": "timeseries",
       "datasource": {"type": "prometheus", "uid": "prometheus"},
       "targets": [
         {"expr": "outbox_pending_count", "legendFormat": "pending"}
       ],
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20}
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 500},
+              {"color": "red", "value": 5000}
+            ]
+          },
+          "custom": {"thresholdsStyle": {"mode": "line+area"}}
+        }
+      }
     },
     {
-      "title": "Outbox 최고령 PENDING (초)",
+      "title": "Outbox 최고령 PENDING (초) — Phase 전환 트리거",
       "type": "timeseries",
       "datasource": {"type": "prometheus", "uid": "prometheus"},
       "targets": [
         {"expr": "outbox_oldest_pending_seconds", "legendFormat": "oldest age"}
       ],
       "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20},
-      "fieldConfig": {"defaults": {"unit": "s"}}
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 5},
+              {"color": "red", "value": 30}
+            ]
+          },
+          "custom": {"thresholdsStyle": {"mode": "line+area"}}
+        },
+        "overrides": []
+      },
+      "description": "5s warning(Phase 2 튜닝), 30s critical(Phase 3 CDC 검토) — ADR-010"
     },
     {
       "title": "Kafka consumer lag (max)",
