@@ -20,36 +20,27 @@ Outbox 패턴 기반 송금, Kafka Streams 기반 실시간 FDS, ELK 통합 관�
 
 ## 시스템 한 장 요약
 
-```mermaid
-flowchart LR
-    Client[클라이언트] -->|HTTPS| Nginx
-    Nginx -->|/api/transfers| TransferAPI[Transfer-API :8080]
-    Nginx -->|/api/fds| FdsAPI[FDS-API :8082]
+<p align="center">
+  <img src="docs/diagrams/svg/02-data-flow.svg" alt="데이터 흐름 다이어그램" width="900"/>
+</p>
 
-    TransferAPI -->|@Transactional| PG[(PostgreSQL)]
-    TransferAPI -->|INCRBY| Redis[(Redis)]
-    TransferAPI -.->|ApplicationEvent| Outbox[(transfer_events)]
-    PG --- Outbox
+| 다이어그램 | SVG | 소스 |
+|---|---|---|
+| System Context | [01-system-context.svg](docs/diagrams/svg/01-system-context.svg) | [.mmd](docs/diagrams/src/01-system-context.mmd) |
+| 데이터 흐름 | [02-data-flow.svg](docs/diagrams/svg/02-data-flow.svg) | [.mmd](docs/diagrams/src/02-data-flow.mmd) |
+| 헥사고날 계층 | [03-hexagonal-layers.svg](docs/diagrams/svg/03-hexagonal-layers.svg) | [.mmd](docs/diagrams/src/03-hexagonal-layers.mmd) |
+| 분산 트레이싱 시퀀스 | [04-distributed-tracing.svg](docs/diagrams/svg/04-distributed-tracing.svg) | [.mmd](docs/diagrams/src/04-distributed-tracing.mmd) |
+| Outbox 파티셔닝 Before/After | [05-outbox-partitioning.svg](docs/diagrams/svg/05-outbox-partitioning.svg) | [.mmd](docs/diagrams/src/05-outbox-partitioning.mmd) |
 
-    Outbox -->|Polling MOD n| Relay[Transfer-Relay x3<br/>Spring Batch]
-    Relay -->|produce| Kafka{{Kafka<br/>transfer-transaction-events}}
-
-    Kafka -->|Streams A| FdsAPI
-    Kafka -->|Streams B 10m window| FdsAPI
-    FdsAPI -->|analysis| FraudDB[(fraud_detections)]
-    FdsAPI -->|alert| Alerts[(suspicious_pattern_alerts)]
-
-    TransferAPI -. JSON 로그 .-> Filebeat
-    FdsAPI -. JSON 로그 .-> Filebeat
-    Filebeat --> ES[(Elasticsearch)]
-    ES --> Kibana
-```
-
-자세한 컨테이너 단위 다이어그램은 [`docs/etc/system-architecture.md`](docs/etc/system-architecture.md).
+자세한 컨테이너 단위 다이어그램과 다이어그램별 설명은 [`docs/etc/system-architecture.md`](docs/etc/system-architecture.md).
 
 ---
 
 ## Phase 1 — Outbox + 파티셔닝 (정합성)
+
+<p align="center">
+  <img src="docs/diagrams/svg/05-outbox-partitioning.svg" alt="Outbox 파티셔닝 Before/After" width="800"/>
+</p>
 
 **문제**: `@Transactional` 안에서 Kafka 를 직접 호출하면 커밋 후 발행 실패 시 이벤트가 유실된다. 2PC 는 인프라 부담이 크다.
 
