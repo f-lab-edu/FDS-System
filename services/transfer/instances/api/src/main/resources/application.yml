@@ -1,9 +1,25 @@
+server:
+  tomcat:
+    accesslog:
+      enabled: true
+      directory: ${LOG_PATH:/var/log/apps}
+      prefix: transfer-api-access
+      suffix: .log
+      file-date-format: .yyyy-MM-dd
+      pattern: '{"@timestamp":"%t{yyyy-MM-dd''T''HH:mm:ss.SSSXXX}","remote_ip":"%a","method":"%m","uri":"%U","query":"%q","status":%s,"bytes":%b,"duration_ms":%D,"user_agent":"%{User-Agent}i","referer":"%{Referer}i","app_name":"transfer-api"}'
+      buffered: false
+
 spring:
   application:
     name: transfer-api
   autoconfigure:
     exclude:
       - org.springframework.boot.actuate.autoconfigure.tracing.BraveAutoConfiguration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 1s
   datasource:
     url: jdbc:postgresql://localhost:5432/transfer
     username: postgres

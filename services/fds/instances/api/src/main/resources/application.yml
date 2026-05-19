@@ -1,5 +1,14 @@
 server:
   port: 8082
+  tomcat:
+    accesslog:
+      enabled: true
+      directory: ${LOG_PATH:/var/log/apps}
+      prefix: fds-api-access
+      suffix: .log
+      file-date-format: .yyyy-MM-dd
+      pattern: '{"@timestamp":"%t{yyyy-MM-dd''T''HH:mm:ss.SSSXXX}","remote_ip":"%a","method":"%m","uri":"%U","query":"%q","status":%s,"bytes":%b,"duration_ms":%D,"user_agent":"%{User-Agent}i","referer":"%{Referer}i","app_name":"fds-api"}'
+      buffered: false
 
 spring:
   application:
@@ -13,10 +22,9 @@ spring:
   # ============================================
   cloud:
     function:
-      # 부하 테스트용: 하나만 활성화
-      definition: processTransferEvents
-      # definition: processTransferEvents;detectSuspiciousPatterns
-    
+      # 단일 이벤트 + 10분 윈도우 패턴 탐지 동시 활성화
+      definition: processTransferEvents;detectSuspiciousPatterns
+
     stream:
       bindings:
         # [파이프라인 A] 단일 이벤트 처리

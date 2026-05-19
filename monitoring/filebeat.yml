@@ -3,19 +3,38 @@ filebeat.inputs:
     enabled: true
     paths:
       - /var/log/apps/*.log
+    exclude_files: ['.*access.*\.log$']
     json.keys_under_root: true
     json.add_error_key: true
     json.message_key: message
     fields:
+      log_type: app
+      environment: local
+    fields_under_root: true
+
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/apps/*access*.log
+    json.keys_under_root: true
+    json.add_error_key: true
+    fields:
+      log_type: access
       environment: local
     fields_under_root: true
 
 output.elasticsearch:
   hosts: ["elasticsearch:9200"]
-  index: "app-logs-%{+yyyy.MM.dd}"
+  indices:
+    - index: "access-logs-%{+yyyy.MM.dd}"
+      when.equals:
+        log_type: "access"
+    - index: "app-logs-%{+yyyy.MM.dd}"
+      when.equals:
+        log_type: "app"
 
-setup.template.name: "app-logs"
-setup.template.pattern: "app-logs-*"
+setup.template.name: "logs"
+setup.template.pattern: "*-logs-*"
 setup.ilm.enabled: false
 
 processors:
