@@ -103,6 +103,29 @@ groups:
           summary: "Transfer API 5xx 비율 {{ $value | humanizePercentage }}"
           description: "5분간 1% 초과. DLQ / 알림 채널 미구현 상태라 회복 자동화 없음."
 
+  - name: transentia-dlq
+    interval: 30s
+    rules:
+      - alert: DlqDeadLetterPresent
+        expr: dlq_dead_letter_count > 0
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "DLQ 에 {{ $value }} 건 DEAD_LETTER 잔존"
+          description: "DLQ Retry Worker 가 부활 시도하지만 cool-down(기본 60분) 안에 누적된 상황. 영구 원인 검토 필요."
+
+      - alert: DlqDeadLetterHigh
+        expr: dlq_dead_letter_count > 100
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "DLQ DEAD_LETTER {{ $value }} 건 (임계 초과)"
+          description: "단순 일시적 장애가 아닌 시스템적 문제 가능. Outbox 발행 경로 / Kafka 가용성 / 메시지 포맷 점검."
+
   - name: transentia-outbox
     interval: 30s
     rules:

@@ -169,6 +169,44 @@ class TransferEventsOutboxJdbcRepository(
         )
     }
 
+    /**
+     * DEAD_LETTER 중 일정 시간 지난 row 를 PENDING 으로 되돌린다.
+     * SKIP LOCKED 로 다른 DLQ Worker 인스턴스와 경합 방지.
+     */
+    override fun reviveDeadLetters(olderThan: Instant, limit: Int, now: Instant): Int {
+        val sql = """
+            UPDATE transfer_events
+            SET status = 'PENDING',
+                attempt_count = 0,
+                next_retry_at = :now,
+                updated_at = :now
+            WHERE event_id IN (
+                SELECT event_id FROM transfer_events
+                WHERE status = 'DEAD_LETTER'
+                  AND updated_at <= :olderThan
+                ORDER BY updated_at ASC
+                LIMIT :limit
+                FOR UPDATE SKIP LOCKED
+            )
+        """.trimIndent()
+
+        return jdbc.update(
+            sql, mapOf(
+                "now" to Timestamp.from(now),
+                "olderThan" to Timestamp.from(olderThan),
+                "limit" to limit,
+            )
+        )
+    }
+
+    override fun countDeadLetters(): Long {
+        return jdbc.queryForObject(
+            "SELECT COUNT(*) FROM transfer_events WHERE status = 'DEAD_LETTER'",
+            mapOf<String, Any>(),
+            Long::class.java
+        ) ?: 0L
+    }
+
     private val claimedRowMapper = RowMapper { rs, _ ->
         ClaimedRow(
             eventId = rs.getLong("event_id"),

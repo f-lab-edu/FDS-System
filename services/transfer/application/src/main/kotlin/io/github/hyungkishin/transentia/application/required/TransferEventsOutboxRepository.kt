@@ -45,8 +45,20 @@ interface TransferEventsOutboxRepository {
 
     /**
      * DEAD_LETTER 전환
-     * 
+     *
      * maxAttempts 초과 시
      */
     fun markAsDeadLetter(eventId: Long, error: String?, now: Instant)
+
+    /**
+     * DLQ Retry Worker 가 사용. DEAD_LETTER 중 updated_at 이 olderThan 이전인 row 를
+     * PENDING 으로 되돌린다. attempt_count 는 0 으로 리셋 (재시도 카운트 새로 시작).
+     * 반환: revive 한 row 수.
+     */
+    fun reviveDeadLetters(olderThan: Instant, limit: Int, now: Instant): Int
+
+    /**
+     * 현재 DEAD_LETTER 인 row 수 — 메트릭/알림용.
+     */
+    fun countDeadLetters(): Long
 }
