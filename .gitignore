@@ -46,3 +46,8 @@ buildSrc/.kotlin/errors/
 ### Application Logs ###
 logs/
 
+
+# OMC / Claude Code 메타
+.omc/
+.claude/scheduled_tasks.lock
+claude/
