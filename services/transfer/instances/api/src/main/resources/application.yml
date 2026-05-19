@@ -1,4 +1,5 @@
 server:
+  shutdown: graceful
   tomcat:
     accesslog:
       enabled: true
@@ -12,6 +13,8 @@ server:
 spring:
   application:
     name: transfer-api
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
   autoconfigure:
     exclude:
       - org.springframework.boot.actuate.autoconfigure.tracing.BraveAutoConfiguration
