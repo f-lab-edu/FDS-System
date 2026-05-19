@@ -322,3 +322,10 @@ Brave는 Zipkin 생태계에 묶여 있다. W3C Trace Context를 부분적으로
 - `monitoring/filebeat.yml`
 - ELK 도입 상세: `docs/etc/observability-setup - ELK_Stack.md`
 - W3C Trace Context 정리: `docs/etc/W3C Trace Context.md`
+
+## 관련 ADR / 실험
+
+- [ADR-005 Redis 일일 한도 캐시](../adr/ADR-005-redis-daily-limit-cache.md)
+- [ADR-006 ELK 관측성](../adr/ADR-006-elk-observability.md)
+- [ADR-007 분산 트레이싱](../adr/ADR-007-distributed-tracing-context-propagation.md)
+- [E3 Redis CB chaos 실험](../experiments/E3-circuit-breaker/) (NOT YET RUN)

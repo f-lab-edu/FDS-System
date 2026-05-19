@@ -234,3 +234,10 @@ Outbox는 "at-least-once" 모델이다. Relay가 발행 직후 status 업데이�
 - 부하 테스트 시나리오: `load-test/vus-10.js`, `load-test/vus-25.js`, `load-test/vus-50.js`, `load-test/vus-100.js`, `load-test/hotspot-test.js`
 - 성능 측정 결과: `docs/etc/performance-test.md`
 - 파티셔닝 설계: `docs/etc/partitioning-strategy.md`
+
+## 관련 ADR / 실험
+
+- [ADR-002 Transactional Outbox](../adr/ADR-002-transactional-outbox-pattern.md)
+- [ADR-003 MOD 파티셔닝](../adr/ADR-003-relay-partitioning-by-modulo.md)
+- [ADR-010 비동기 발행 진화](../adr/ADR-010-async-event-publishing-evolution.md) — Phase 1 의 미래
+- [E1 Outbox 파티셔닝 실험](../experiments/E1-outbox-partitioning/)

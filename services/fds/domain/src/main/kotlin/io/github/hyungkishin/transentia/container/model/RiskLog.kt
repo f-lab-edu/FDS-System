@@ -13,7 +13,7 @@ class RiskLog private constructor(
     val decision: FinalDecisionType,
     val reasons: List<String>,
 
-    // TODO: ai Score 구체화 필요
+    /** AiScoreProvider 가 채운 ML 기반 점수(0.0~1.0). 미구현 어댑터(NoOp) 면 null. */
     val aiScore: Double?,
     val evaluatedAt: Instant,
     val ruleHits: List<RiskRuleHit>

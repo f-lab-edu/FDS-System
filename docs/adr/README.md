@@ -32,6 +32,24 @@
 - [의사결정 Timeline](../DECISIONS-TIMELINE.md) — ADR 간의 시간 축
 - [LIMITATIONS](../LIMITATIONS.md) — 각 ADR 이 남긴 갭
 - [Phase 별 회고](../retrospective/README.md) — ADR 의 사후 평가
+- [EVOLUTION-ROADMAP](../EVOLUTION-ROADMAP.md) — 트래픽 진화 5단계
+
+## ADR ↔ 실험 ↔ 회고 정합 매트릭스 (ADR-009 규칙)
+
+| ADR | 관련 실험 | 관련 회고 | 관련 문서 |
+|---|---|---|---|
+| ADR-001 헥사고날 | — (설계 결정) | [phase-1](../retrospective/phase-1-outbox-and-partitioning.md), [phase-2](../retrospective/phase-2-observability-and-cache.md), [phase-3](../retrospective/phase-3-streaming-and-fds.md) | [현실적인 헥사고날](../etc/현실적인%20헥사고날%20아키텍처와의%20타협.md) |
+| ADR-002 Outbox | [E1](../experiments/E1-outbox-partitioning/) | [phase-1](../retrospective/phase-1-outbox-and-partitioning.md) | [ADR-010](ADR-010-async-event-publishing-evolution.md) supersedes |
+| ADR-003 MOD 파티셔닝 | [E1](../experiments/E1-outbox-partitioning/) | [phase-1](../retrospective/phase-1-outbox-and-partitioning.md) | [performance-test](../etc/performance-test.md), [partitioning-strategy](../etc/partitioning-strategy.md) |
+| ADR-004 Kafka Streams | — (E6 후속 후보) | [phase-3](../retrospective/phase-3-streaming-and-fds.md) | [kafkaStream](../etc/kafkaStream.md) |
+| ADR-005 Redis 캐시 | [E3](../experiments/E3-circuit-breaker/) (NOT YET RUN) | [phase-2](../retrospective/phase-2-observability-and-cache.md) | [LIMITATIONS 1.2/2.3](../LIMITATIONS.md) |
+| ADR-006 ELK | — (운영 데이터 부재) | [phase-2](../retrospective/phase-2-observability-and-cache.md) | [observability-setup](../etc/observability-setup%20-%20ELK_Stack.md) |
+| ADR-007 분산 트레이싱 | — | [phase-2](../retrospective/phase-2-observability-and-cache.md) | [W3C Trace Context](../etc/W3C%20Trace%20Context.md) |
+| ADR-008 build-logic | — (인프라 결정) | — | [build-logic 블로그](../etc/%5Bblog%5D%20buildSrc%20를%20걷어내고%20build-logic%20을%20도입해보자.md) |
+| ADR-009 실험 주도 | 모든 E1~E5 의 메타 | 모든 phase 회고의 메타 | [EXPERIMENTS README](../experiments/README.md) |
+| ADR-010 발행 진화 | [E1](../experiments/E1-outbox-partitioning/), [E5](../experiments/E5-cdc-vs-outbox/) (NOT YET RUN) | [phase-1](../retrospective/phase-1-outbox-and-partitioning.md) | [EVOLUTION-ROADMAP](../EVOLUTION-ROADMAP.md) |
+
+검색 효율: 실험/회고/문서 → ADR 역방향은 각 파일의 References 섹션 또는 이 표를 참조.
 
 ## 후속 ADR 후보
 

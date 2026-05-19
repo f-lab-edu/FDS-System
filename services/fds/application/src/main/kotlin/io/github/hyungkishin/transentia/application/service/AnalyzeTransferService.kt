@@ -29,14 +29,11 @@ class AnalyzeTransferService(
     fun analyze(event: TransferCompleteEvent): RiskLog {
         log.info("@@@@@@[FDS] 송금 분석 시작 - transferId={}, amount={}", event.eventId, event.amount)
 
-        // TODO: redis 캐싱 ?
-        // TODO: model (그래포 ? 타임라인 ? ) 제공해주는 라이브러리 리서치 -> 백터값을 추출 ! -> ES 에 적재 -> 유사도 -> 검색 ! (ML 영역의 모델을 검색해보는것 이 목적 + 학습 )
-        // TODO: 엣지케이스 -> 알림 + log 성 + 학습 + 관리자 !
-        // 과연 은행사마다 만들었을까 ? 이상감지를 탐지해주는 패턴이 있을것이다.
-
-        // NOTE : Hive 류의 빅데이터 플랫폼 <- 데이터의 근거
-        // 10년치 계좌의 모든 계좌 이력의 전체 -> 불특정 다수 -> 관계도를 -> queryBase 로 찾을 경우 ( 성능 up 비용이 높을때다. )
-        // LAG + LLM
+        // 후속 작업 (코드 외부에서 추적):
+        // - Redis 캐싱: 활성 룰 조회 캐시 — 별도 PR 후보, LIMITATIONS 의 P2.
+        // - ML 어댑터: AiScoreProvider 의 ES dense_vector kNN 실 구현 — docs/etc/ml-anomaly-detection-poc.md
+        // - 엣지케이스 알림: suspicious_pattern_alerts 영속화 완료, WebSocket/Slack 어댑터 — LIMITATIONS 1.3.
+        // - 빅데이터 평가: 10년치 이력 + LLM 기반 그래프 임베딩 — E5 이후 후속 실험.
 
         // 모든 활성화된 룰 조회
         val activeRules = fraudRuleRepository.findAllActive()

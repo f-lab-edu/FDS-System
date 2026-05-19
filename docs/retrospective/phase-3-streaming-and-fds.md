@@ -311,3 +311,9 @@ class NoOpAiScoreProvider : AiScoreProvider {
 - `services/fds/instances/api/src/main/kotlin/io/github/hyungkishin/transentia/container/adapter/NoOpAiScoreProvider.kt`
 - `services/fds/instances/api/src/main/kotlin/io/github/hyungkishin/transentia/container/config/KafkaListenerConfig.kt`
 - Kafka Streams 학습 정리: `docs/etc/kafkaStream.md`
+
+## 관련 ADR / 실험
+
+- [ADR-004 Kafka Streams](../adr/ADR-004-kafka-streams-for-pattern-detection.md)
+- [ADR-009 실험 주도 의사결정](../adr/ADR-009-experiment-driven-decisions.md) — 본 회고의 메타
+- [E5 CDC vs Outbox](../experiments/E5-cdc-vs-outbox/) — 후속 Phase 3 PoC

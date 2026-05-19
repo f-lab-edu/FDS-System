@@ -2,21 +2,14 @@
 
 > 트랜잭션을 넘어, 자금의 흐름을 인식하고 판단하는 시스템.
 
-Outbox 패턴 기반 송금, Kafka Streams 기반 실시간 FDS, ELK 통합 관측성, 분산 트레이싱을 한 레포에서 단계적으로 진화시키며 구축한 **이상거래탐지 플랫폼**.
+송금 도메인에서 정합성·실시간성·운영성 세 축을 단계적으로 풀어간 이상거래탐지 시스템.
 
----
+- 정합성: 송금 트랜잭션과 Kafka 발행을 Outbox 로 묶는다. 둘 중 하나만 성공하는 상태가 없다.
+- 실시간성: 룰 기반 단일 거래 판정 + Kafka Streams 10분 윈도우 집계. 송금이 처리되는 동안 판정한다.
+- 운영성: traceId 한 줄로 송금 → Kafka → FDS → DB 를 따라간다.
 
-## 무엇을 푸는가
+각 결정의 근거는 ADR, 실측은 실험 디렉터리, 회고는 phase 별 문서로 남겼다.
 
-은행/페이먼트의 송금 도메인에서 다음 세 가지를 동시에 만족시키는 일은 어렵다.
-
-1. **정합성** — 송금 DB 커밋과 이벤트 발행이 따로 놀면 안 된다. 한쪽이 실패하면 다른 쪽도 실패해야 한다.
-2. **실시간성** — 이상 거래는 "감지된 후"가 아니라 "처리되는 동안" 판단되어야 한다.
-3. **운영성** — traceId 한 줄로 송금 → Kafka → FDS → DB 까지 추적 가능해야 한다. 못 하면 장애를 못 잡는다.
-
-이 레포는 위 세 가지를 별도 phase 로 분리해 정복한 기록이다. 각 phase 는 **무엇을 잘못했고 어떻게 고쳤는지** 까지 회고로 남겼다.
-
----
 
 ## 시스템 한 장 요약
 
@@ -241,14 +234,12 @@ k6 run load-test/vus-100.js
 
 ---
 
-## 다음 마일스톤
+## 남은 작업
 
-- [ ] `JpaRecentTransferCountQueryAdapter` 의 캐시 적용(Redis sliding window)
-- [ ] `AiScoreProvider` 의 ES dense_vector kNN 어댑터 (`docs/etc/ml-anomaly-detection-poc.md` 의 PoC)
-- [ ] WebSocket / Slack 알림 어댑터 (`suspicious_pattern_alerts` 적재 → 푸시)
-- [ ] DLQ Worker + 재처리 정책
-- [ ] CDC 전환 검토 (Debezium vs Outbox 유지)
-- [ ] Cassandra/sharding 평가 (TPS 한계 측정 후)
+- `AiScoreProvider` 의 실 어댑터 (ES dense_vector kNN). 설계는 `docs/etc/ml-anomaly-detection-poc.md`.
+- 의심 패턴 알림 push 채널 (WebSocket / Slack).
+- DLQ Worker.
+- Phase 3 전환 PoC. 트리거는 `outbox_oldest_pending_seconds` p99 > 30s. 자세한 단계는 `docs/EVOLUTION-ROADMAP.md`.
 
 ---
 
