@@ -177,6 +177,21 @@ services:
       timeout: 5s
       retries: 10
 
+  es-init:
+    image: alpine:3.20
+    container_name: transfer-es-init
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        apk add --no-cache bash python3 curl >/dev/null
+        ES_URL=http://elasticsearch:9200 bash /init/init.sh
+    volumes:
+      - ./monitoring/elasticsearch:/init
+    restart: "no"
+
   kibana:
     image: docker.elastic.co/kibana/kibana:8.11.0
     container_name: transfer-kibana

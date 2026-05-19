@@ -33,9 +33,10 @@ output.elasticsearch:
       when.equals:
         log_type: "app"
 
-setup.template.name: "logs"
-setup.template.pattern: "*-logs-*"
+# ILM 정책 + 인덱스 템플릿은 monitoring/elasticsearch/ 에서 별도 관리.
+# init.sh 가 ES 부팅 후 정책/템플릿을 등록한다. Filebeat 자체는 정책에 관여하지 않음.
 setup.ilm.enabled: false
+setup.template.enabled: false
 
 processors:
   - add_host_metadata:
