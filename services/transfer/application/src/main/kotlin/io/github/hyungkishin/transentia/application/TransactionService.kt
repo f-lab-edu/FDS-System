@@ -37,11 +37,11 @@ class TransactionService(
         val dailyAccumulated = dailyTransferAmountCache.getTodayAmount(sender.id.value)
         TransferValidator.validate(sender, receiver, amount, dailyAccumulated)
 
-        val transaction = Transaction.of(
-            SnowFlakeId(idGenerator.nextId()),
-            sender.id,
-            receiver.id,
-            amount
+        val pending = Transaction.create(
+            id = SnowFlakeId(idGenerator.nextId()),
+            senderId = sender.id,
+            receiverId = receiver.id,
+            amount = amount,
         )
 
         sender.accountBalance.withdrawOrThrow(amount)
@@ -49,9 +49,9 @@ class TransactionService(
         userRepository.save(sender)
         userRepository.save(receiver)
 
-        val savedTransaction = transactionRepository.save(transaction)
-
-        val completeEvent = transaction.complete()
+        // 멱등 완료 — pending → completed 새 인스턴스 + 발행할 이벤트.
+        val (completed, completeEvent) = pending.complete()
+        val savedTransaction = transactionRepository.save(completed)
 
         // 일일 누적치 갱신 (트랜잭션 커밋 전이지만 캐시는 over-estimate 가 under 보다 안전)
         dailyTransferAmountCache.addTodayAmount(sender.id.value, amount.money.rawValue)

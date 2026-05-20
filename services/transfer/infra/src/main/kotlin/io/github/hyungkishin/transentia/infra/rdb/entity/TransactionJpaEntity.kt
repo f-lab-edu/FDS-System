@@ -61,18 +61,15 @@ class TransactionJpaEntity(
     override fun isNew(): Boolean = (version == null)
 
     fun toDomain(): Transaction =
-        Transaction.of(
+        Transaction.reconstitute(
             id = SnowFlakeId(id),
-            senderSnowFlakeId = SnowFlakeId(senderUserId),
-            receiverSnowFlakeId = SnowFlakeId(receiverUserId),
+            senderId = SnowFlakeId(senderUserId),
+            receiverId = SnowFlakeId(receiverUserId),
             amount = Amount(Money.fromRawValue(amount), currency),
-        ).apply {
-            when (status) {
-                TransactionStatus.COMPLETED -> complete()
-                TransactionStatus.FAILED -> {}
-                TransactionStatus.PENDING -> {}
-            }
-        }
+            status = status,
+            createdAt = receivedAt ?: Instant.now(),
+            failReason = null,
+        )
 
     companion object {
         fun from(domain: Transaction): TransactionJpaEntity =
