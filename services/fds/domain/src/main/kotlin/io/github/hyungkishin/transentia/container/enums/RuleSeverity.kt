@@ -4,5 +4,5 @@ enum class RuleSeverity {
     LOW,
     MEDIUM,
     HIGH,
-    CRITICAL
+    CRITICAL,
 }

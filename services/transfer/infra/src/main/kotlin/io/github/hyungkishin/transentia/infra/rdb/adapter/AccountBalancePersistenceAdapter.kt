@@ -9,9 +9,8 @@ import org.springframework.stereotype.Component
 
 @Component
 class AccountBalancePersistenceAdapter(
-    private val jpaRepository: AccountBalanceJpaRepository
+    private val jpaRepository: AccountBalanceJpaRepository,
 ) : AccountBalanceRepository {
-
     override fun findByUserId(snowFlakeId: SnowFlakeId): AccountBalance? =
         jpaRepository.findById(snowFlakeId.value).orElse(null)?.toDomain()
 
@@ -20,5 +19,4 @@ class AccountBalancePersistenceAdapter(
 
         return jpaRepository.save(entity).toDomain()
     }
-
 }

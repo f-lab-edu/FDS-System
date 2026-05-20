@@ -8,7 +8,6 @@ package io.github.hyungkishin.transentia.common.error
  * - 도메인 고유 규칙(예: 잔액 부족, 사기 의심)은 각 도메인 모듈에서 정의한다.
  */
 sealed interface CommonError : DomainError {
-
     /**
      * 리소스를 찾지 못한 경우.
      *
@@ -17,7 +16,7 @@ sealed interface CommonError : DomainError {
      */
     data class NotFound(
         val resource: String,
-        val id: String
+        val id: String,
     ) : CommonError {
         override val code: String = "common.not-found"
         override val message: String = "리소스를 찾을 수 없습니다."
@@ -32,7 +31,7 @@ sealed interface CommonError : DomainError {
      */
     data class InvalidArgument(
         val field: String,
-        val reason: String? = null
+        val reason: String? = null,
     ) : CommonError {
         override val code: String = "common.invalid-argument"
         override val message: String = "요청 값이 유효하지 않습니다."
@@ -46,7 +45,9 @@ sealed interface CommonError : DomainError {
     }
 
     /** 리소스 상태 충돌. */
-    data class Conflict(val reason: String) : CommonError {
+    data class Conflict(
+        val reason: String,
+    ) : CommonError {
         override val code: String = "common.conflict"
         override val message: String = "리소스 상태 충돌이 발생했습니다."
         override val meta: Map<String, Any?> = mapOf("reason" to reason)
@@ -60,7 +61,7 @@ sealed interface CommonError : DomainError {
      */
     data class ExternalDependencyError(
         val service: String,
-        val detail: String? = null
+        val detail: String? = null,
     ) : CommonError {
         override val code: String = "common.external-dependency"
         override val message: String = "외부 서비스 오류가 발생했습니다."

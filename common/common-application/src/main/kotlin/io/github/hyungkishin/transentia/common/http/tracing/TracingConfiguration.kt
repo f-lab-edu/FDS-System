@@ -11,31 +11,24 @@ import org.springframework.http.server.observation.ServerRequestObservationConte
 @Configuration
 @ConditionalOnProperty(name = ["management.tracing.enabled"], havingValue = "true", matchIfMissing = true)
 class TracingConfiguration {
-
     /**
      * 커스텀 헤더 전파를 위한 필터
      */
     @Bean
-    fun traceResponseHeaderFilter(): TraceResponseHeaderFilter {
-        return TraceResponseHeaderFilter()
-    }
+    fun traceResponseHeaderFilter(): TraceResponseHeaderFilter = TraceResponseHeaderFilter()
 
     /**
      * 추가 Span 태그 설정 (선택사항)
      */
     @Bean
-    fun customSpanProcessor(): ObservationHandler<ServerRequestObservationContext> {
-        return object : ObservationHandler<ServerRequestObservationContext> {
+    fun customSpanProcessor(): ObservationHandler<ServerRequestObservationContext> =
+        object : ObservationHandler<ServerRequestObservationContext> {
             override fun onStart(context: ServerRequestObservationContext) {
                 context.addHighCardinalityKeyValue(
-                    KeyValue.of("http.user_agent", context.carrier.getHeader("User-Agent") ?: "unknown")
+                    KeyValue.of("http.user_agent", context.carrier.getHeader("User-Agent") ?: "unknown"),
                 )
             }
 
-            override fun supportsContext(context: Observation.Context): Boolean {
-                return context is ServerRequestObservationContext
-            }
+            override fun supportsContext(context: Observation.Context): Boolean = context is ServerRequestObservationContext
         }
-    }
-
 }

@@ -7,16 +7,15 @@ data class TransferResponseCommand(
     val transactionId: Long,
     val status: String,
     val createdAt: Instant,
-    val receivedAt: Instant?
+    val receivedAt: Instant?,
 ) {
     companion object {
-        fun from(tx: Transaction): TransferResponseCommand {
-            return TransferResponseCommand(
+        fun from(tx: Transaction): TransferResponseCommand =
+            TransferResponseCommand(
                 transactionId = tx.id.value,
                 status = tx.status.name,
                 createdAt = tx.createdAt,
-                receivedAt = tx.createdAt
+                receivedAt = tx.createdAt,
             )
-        }
     }
 }

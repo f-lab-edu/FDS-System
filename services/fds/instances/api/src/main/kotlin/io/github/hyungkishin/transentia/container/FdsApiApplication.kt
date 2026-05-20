@@ -6,7 +6,7 @@ import org.springframework.boot.runApplication
 import org.springframework.context.annotation.Import
 
 @SpringBootApplication(
-    scanBasePackages = ["io.github.hyungkishin.transentia"]
+    scanBasePackages = ["io.github.hyungkishin.transentia"],
 )
 @Import(FdsInfraJpaConfig::class)
 class FdsApiApplication

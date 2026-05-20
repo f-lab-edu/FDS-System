@@ -1,0 +1,52 @@
+{
+  "app_logs_template": {
+    "index_patterns": ["app-logs-*"],
+    "data_stream": {},
+    "template": {
+      "settings": {
+        "number_of_shards": 1,
+        "number_of_replicas": 0,
+        "index.lifecycle.name": "app_logs_policy"
+      },
+      "mappings": {
+        "properties": {
+          "@timestamp":  { "type": "date" },
+          "traceId":     { "type": "keyword" },
+          "spanId":      { "type": "keyword" },
+          "app_name":    { "type": "keyword" },
+          "level":       { "type": "keyword" },
+          "logger_name": { "type": "keyword" },
+          "thread_name": { "type": "keyword" },
+          "message":     { "type": "text" },
+          "stack_trace": { "type": "text" }
+        }
+      }
+    }
+  },
+  "access_logs_template": {
+    "index_patterns": ["access-logs-*"],
+    "data_stream": {},
+    "template": {
+      "settings": {
+        "number_of_shards": 1,
+        "number_of_replicas": 0,
+        "index.lifecycle.name": "access_logs_policy"
+      },
+      "mappings": {
+        "properties": {
+          "@timestamp":   { "type": "date" },
+          "remote_ip":    { "type": "ip" },
+          "method":       { "type": "keyword" },
+          "uri":          { "type": "keyword" },
+          "query":        { "type": "keyword" },
+          "status":       { "type": "short" },
+          "bytes":        { "type": "long" },
+          "duration_ms":  { "type": "long" },
+          "user_agent":   { "type": "keyword" },
+          "referer":      { "type": "keyword" },
+          "app_name":     { "type": "keyword" }
+        }
+      }
+    }
+  }
+}

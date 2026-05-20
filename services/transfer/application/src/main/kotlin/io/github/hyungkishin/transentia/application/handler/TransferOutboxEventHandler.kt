@@ -10,7 +10,7 @@ import org.springframework.transaction.event.TransactionalEventListener
 
 @Component
 class TransferOutboxEventHandler(
-    private val eventPublisher: TransferEventPublisher
+    private val eventPublisher: TransferEventPublisher,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -21,5 +21,4 @@ class TransferOutboxEventHandler(
 
         eventPublisher.publish(event)
     }
-
 }

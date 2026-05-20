@@ -1,9 +1,54 @@
+server:
+  shutdown: graceful
+  tomcat:
+    accesslog:
+      enabled: true
+      directory: ${LOG_PATH:/var/log/apps}
+      prefix: transfer-api-access
+      suffix: .log
+      file-date-format: .yyyy-MM-dd
+      pattern: '{"@timestamp":"%t{yyyy-MM-dd''T''HH:mm:ss.SSSXXX}","remote_ip":"%a","method":"%m","uri":"%U","query":"%q","status":%s,"bytes":%b,"duration_ms":%D,"user_agent":"%{User-Agent}i","referer":"%{Referer}i","app_name":"transfer-api"}'
+      buffered: false
+
 spring:
   application:
     name: transfer-api
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
   autoconfigure:
     exclude:
       - org.springframework.boot.actuate.autoconfigure.tracing.BraveAutoConfiguration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 1s
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      redis:
+        register-health-indicator: true
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        record-exceptions:
+          - org.springframework.data.redis.RedisConnectionFailureException
+          - org.springframework.dao.QueryTimeoutException
+          - io.lettuce.core.RedisCommandTimeoutException
+          - io.lettuce.core.RedisException
+  retry:
+    instances:
+      redis:
+        max-attempts: 2
+        wait-duration: 100ms
+        retry-exceptions:
+          - org.springframework.dao.TransientDataAccessException
+          - io.lettuce.core.RedisCommandTimeoutException
   datasource:
     url: jdbc:postgresql://localhost:5432/transfer
     username: postgres

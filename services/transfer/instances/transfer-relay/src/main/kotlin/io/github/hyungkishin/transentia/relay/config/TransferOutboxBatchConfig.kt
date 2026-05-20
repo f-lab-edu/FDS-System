@@ -27,15 +27,13 @@ class TransferOutboxBatchConfig(
     private val jobRepository: JobRepository,
     private val transactionManager: PlatformTransactionManager,
     private val relayConfig: OutboxRelayConfig,
-    private val faultTolerantConfigurer: FaultTolerantStepConfigurer
+    private val faultTolerantConfigurer: FaultTolerantStepConfigurer,
 ) {
-
     @Bean
-    fun transferOutboxJob(transferOutboxStep: Step): Job {
-        return JobBuilder("transferOutboxJob", jobRepository)
+    fun transferOutboxJob(transferOutboxStep: Step): Job =
+        JobBuilder("transferOutboxJob", jobRepository)
             .start(transferOutboxStep)
             .build()
-    }
 
     @Bean
     fun transferOutboxStep(
@@ -44,9 +42,9 @@ class TransferOutboxBatchConfig(
         writer: TransferOutboxItemWriter,
         stepListener: TransferOutboxStepListener,
         skipListener: TransferOutboxSkipListener,
-        @Qualifier("relayTaskExecutor") taskExecutor: TaskExecutor
-    ): Step {
-        return StepBuilder("transferOutboxStep", jobRepository)
+        @Qualifier("relayTaskExecutor") taskExecutor: TaskExecutor,
+    ): Step =
+        StepBuilder("transferOutboxStep", jobRepository)
             .chunk<ClaimedRow, OutboxItem>(relayConfig.chunkSize, transactionManager)
             .reader(reader)
             .processor(processor)
@@ -56,7 +54,6 @@ class TransferOutboxBatchConfig(
             .listener(skipListener)
             .let { faultTolerantConfigurer.configure(it.faultTolerant()) }
             .build()
-    }
 
     /**
      * Batch TaskExecutor
@@ -65,8 +62,8 @@ class TransferOutboxBatchConfig(
      * 이름: relayTaskExecutor (충돌 방지)
      */
     @Bean("relayTaskExecutor")
-    fun relayTaskExecutor(): TaskExecutor {
-        return ThreadPoolTaskExecutor().apply {
+    fun relayTaskExecutor(): TaskExecutor =
+        ThreadPoolTaskExecutor().apply {
             corePoolSize = relayConfig.threadPoolSize
             maxPoolSize = relayConfig.threadPoolSize
             queueCapacity = relayConfig.chunkSize * 2
@@ -75,6 +72,4 @@ class TransferOutboxBatchConfig(
             setAwaitTerminationSeconds(60)
             initialize()
         }
-    }
-
 }

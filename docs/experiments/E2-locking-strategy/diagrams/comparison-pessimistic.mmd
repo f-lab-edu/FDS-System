@@ -1,0 +1,58 @@
+%% 낙관락 retry storm vs 비관락 정렬 락 비교
+%% 측정 회차: 2025-11-22 (낙관락) / 2025-11-23 (비관락), VU=5, simple-test.js
+%% 시나리오: 두 VU가 거의 동시에 같은 계좌(A=110-100-000001)에서 출금
+sequenceDiagram
+    autonumber
+    participant VUA as VU(A->B)
+    participant VUB as VU(B->A)
+    participant API as Transfer API<br/>(loadUsers 정렬 락)
+    participant DB as Postgres
+
+    Note over VUA,DB: 비관락 — 양방향 송금이 동시에 발생
+
+    VUA->>API: POST /transfers (A -> B)
+    activate API
+    Note right of API: senderAccount=A, receiverAccount=B<br/>A < B 이므로 정렬 순서: A, B
+
+    VUB->>API: POST /transfers (B -> A)
+    activate API
+    Note right of API: senderAccount=B, receiverAccount=A<br/>A < B 이므로 정렬 순서: A, B<br/>(두 요청 모두 같은 순서로 락 요청)
+
+    API->>DB: SELECT * FROM account_balance<br/>WHERE id=A FOR UPDATE
+    DB-->>API: row A 락 획득 (VUA)
+
+    API->>DB: SELECT * FROM account_balance<br/>WHERE id=A FOR UPDATE
+    Note over DB: VUB 대기<br/>(VUA 가 A 락을 풀 때까지)
+
+    API->>DB: SELECT * FROM account_balance<br/>WHERE id=B FOR UPDATE
+    DB-->>API: row B 락 획득 (VUA)
+
+    API->>DB: UPDATE A balance, UPDATE B balance
+    API->>DB: COMMIT (VUA 트랜잭션 종료)
+    DB-->>API: VUA 락 모두 해제
+
+    API-->>VUA: 200 OK
+    deactivate API
+
+    DB-->>API: row A 락 획득 (VUB)
+    API->>DB: SELECT * FROM account_balance<br/>WHERE id=B FOR UPDATE
+    DB-->>API: row B 락 획득 (VUB)
+    API->>DB: UPDATE B balance, UPDATE A balance
+    API->>DB: COMMIT
+
+    API-->>VUB: 200 OK
+    deactivate API
+
+    Note over VUA,DB: 실측 (k6-detailed.log 2025-11-23):<br/>VU=5에서 18% 실패 (잔여 @Version 경로)<br/>데드락 0건 — 정렬 락이 순환 대기를 차단
+
+%% =====================================================
+%% [3] 핵심 차이 요약
+%% =====================================================
+%% 낙관락:  병렬 진입 -> 한 명만 commit 성공 -> 나머지 실패
+%%         실패는 5xx로 클라이언트에 노출, 재시도는 또 다른 충돌의 씨앗
+%% 비관락:  병렬 진입 -> FIFO 대기열 -> 차례로 성공
+%%         실패가 latency 로 흡수, 정렬이 데드락 차단
+%%
+%% 핵심 결정타: "비관락" 그 자체보다 "계좌번호 오름차순 정렬 락"
+%% 정렬 없이 비관락만 적용하면 양방향 송금에서 데드락 발생
+%% (TransactionService.kt:69-86 참고)

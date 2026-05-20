@@ -1,0 +1,84 @@
+# ============================================
+# AlertManager 설정
+# ============================================
+# Prometheus → AlertManager → Slack (critical / warning 분리)
+# Slack webhook URL 은 환경변수 SLACK_WEBHOOK_URL 또는
+# /etc/alertmanager/secrets/slack-webhook 으로 주입.
+
+global:
+  resolve_timeout: 5m
+  slack_api_url_file: /etc/alertmanager/secrets/slack-webhook
+
+route:
+  receiver: slack-monitoring
+  group_by: ['alertname', 'service']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - matchers:
+        - severity = "critical"
+      receiver: slack-incident
+      group_wait: 10s
+      repeat_interval: 1h
+      continue: true
+
+    - matchers:
+        - severity = "high"
+      receiver: slack-incident
+      group_wait: 30s
+      repeat_interval: 2h
+
+    - matchers:
+        - severity = "warning"
+      receiver: slack-monitoring
+
+    - matchers:
+        - phase_transition =~ ".+"
+      receiver: slack-roadmap
+      repeat_interval: 24h
+
+inhibit_rules:
+  # critical 이 떴으면 같은 service 의 warning 은 묶지 말고 critical 만 알린다
+  - source_matchers: [severity = "critical"]
+    target_matchers: [severity = "warning"]
+    equal: [alertname, service]
+
+receivers:
+  - name: slack-incident
+    slack_configs:
+      - channel: '#fds-incident'
+        send_resolved: true
+        title: '[{{ .Status | toUpper }}] {{ .CommonLabels.severity | toUpper }} — {{ .CommonLabels.alertname }}'
+        text: |
+          *Service:* {{ .CommonLabels.service | default "unknown" }}
+          *Instance:* {{ .CommonLabels.instance | default "-" }}
+          {{ range .Alerts }}
+          *Summary:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Started:* {{ .StartsAt }}
+          {{ end }}
+
+  - name: slack-monitoring
+    slack_configs:
+      - channel: '#fds-monitoring'
+        send_resolved: true
+        title: '[{{ .Status }}] {{ .CommonLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          {{ .Annotations.summary }}
+          {{ .Annotations.description }}
+          {{ end }}
+
+  - name: slack-roadmap
+    slack_configs:
+      - channel: '#fds-roadmap'
+        send_resolved: false
+        title: '[PHASE TRANSITION] {{ .CommonLabels.phase_transition }}'
+        text: |
+          ADR-010 / ADR-011 의 phase 전환 임계 도달.
+          {{ range .Alerts }}
+          *{{ .Annotations.summary }}*
+          {{ .Annotations.description }}
+          {{ end }}
+          → docs/EVOLUTION-ROADMAP.md 의 다음 단계 체크리스트 검토.

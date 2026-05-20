@@ -8,16 +8,15 @@ import org.springframework.stereotype.Component
 
 @Component
 class FraudRulePersistanceAdapter(
-    private val jpaRepository: FraudRuleJpaRepository
+    private val jpaRepository: FraudRuleJpaRepository,
 ) : FraudRuleRepository {
-
     override fun save(fraudeRule: FraudeRule): Long {
         val entity = FraudRuleJpaEntity.from(fraudeRule)
         return jpaRepository.save(entity).id
     }
 
-    override fun findAllActive(): List<FraudeRule> {
-        return jpaRepository.findByIsActiveTrue()
+    override fun findAllActive(): List<FraudeRule> =
+        jpaRepository
+            .findByIsActiveTrue()
             .map { it.toDomain() }
-    }
 }

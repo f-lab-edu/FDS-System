@@ -14,20 +14,17 @@ class FraudeRule private constructor(
     val createdAt: Instant?,
     val updatedAt: Instant?,
 ) {
-
     companion object {
-        fun of(id: SnowFlakeId,
-               ruleName: String,
-               ruleType: String,
-               weight: Long,
-               threshold: Map<String, Any>,
-               isActive: Boolean,
-               priority: Int,
-               createdAt: Instant,
-               updatedAt: Instant
-        ): FraudeRule {
-            return FraudeRule(id, ruleName, ruleType, weight, threshold, isActive, priority, createdAt, updatedAt)
-        }
+        fun of(
+            id: SnowFlakeId,
+            ruleName: String,
+            ruleType: String,
+            weight: Long,
+            threshold: Map<String, Any>,
+            isActive: Boolean,
+            priority: Int,
+            createdAt: Instant,
+            updatedAt: Instant,
+        ): FraudeRule = FraudeRule(id, ruleName, ruleType, weight, threshold, isActive, priority, createdAt, updatedAt)
     }
-
 }

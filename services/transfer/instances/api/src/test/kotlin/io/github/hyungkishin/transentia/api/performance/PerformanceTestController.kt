@@ -8,7 +8,7 @@ import org.springframework.web.client.RestTemplate
 
 /**
  * RestTemplate 성능 테스트를 위한 컨트롤러
- * 
+ *
  * /test/basic   - 기본 RestTemplate 사용 (Connection Pool 없음)
  * /test/pooled  - Connection Pool이 설정된 RestTemplate 사용
  */
@@ -16,9 +16,8 @@ import org.springframework.web.client.RestTemplate
 @RequestMapping("/test")
 class PerformanceTestController(
     @Qualifier("basicRestTemplate") private val basicRestTemplate: RestTemplate,
-    @Qualifier("pooledRestTemplate") private val pooledRestTemplate: RestTemplate
+    @Qualifier("pooledRestTemplate") private val pooledRestTemplate: RestTemplate,
 ) {
-
     companion object {
         private const val EXTERNAL_API_URL = "https://jsonplaceholder.typicode.com/posts/1"
     }
@@ -30,10 +29,9 @@ class PerformanceTestController(
      * - TPS가 높아지면 TIME_WAIT 소켓이 대량 발생
      */
     @GetMapping("/basic")
-    fun testBasic(): String {
-        return basicRestTemplate.getForObject(EXTERNAL_API_URL, String::class.java)
+    fun testBasic(): String =
+        basicRestTemplate.getForObject(EXTERNAL_API_URL, String::class.java)
             ?: "No response"
-    }
 
     /**
      * Connection Pool RestTemplate
@@ -42,9 +40,7 @@ class PerformanceTestController(
      * - TIME_WAIT 소켓 발생 최소화
      */
     @GetMapping("/pooled")
-    fun testPooled(): String {
-        return pooledRestTemplate.getForObject(EXTERNAL_API_URL, String::class.java)
+    fun testPooled(): String =
+        pooledRestTemplate.getForObject(EXTERNAL_API_URL, String::class.java)
             ?: "No response"
-    }
-
 }

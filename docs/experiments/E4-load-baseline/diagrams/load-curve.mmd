@@ -1,0 +1,19 @@
+---
+title: VU 증가에 따른 TPS / p95 곡선 (실측 1점 + 추정 4점)
+---
+%%{init: {"theme": "default"}}%%
+xychart-beta
+    title "VU별 TPS와 p95 응답시간 (VU=5 실측, 10/25/50/100 추정)"
+    x-axis "VU" [5, 10, 25, 50, 100]
+    y-axis "TPS (req/s)" 0 --> 60
+    bar  "TPS (실측 VU=5, 나머지 추정 중간값)" [4.81, 9, 22, 38, 40]
+    line "p95 (ms, 추정 중간값)"               [76, 140, 300, 1000, 1800]
+
+%% 주: VU=5 만 simple-test.js 기반 직접 측정 (k6-detailed.log line 108).
+%%     VU=10/25/50/100 은 simple-test 결과 + 비관락 직렬화 모델 + HikariCP 풀 크기 10 제약으로부터의 외삽 추정.
+%%     실측 후 RESULTS.md §2.5 표 갱신과 함께 이 다이어그램도 갱신할 것.
+%%
+%% 읽는 법:
+%%   - TPS 막대가 VU 50 → 100 구간에서 plateau 가 되면 H3 (풀 한계) 성립.
+%%   - p95 가 VU 25 부터 가파르게 올라가면 H2 (락 sublinear) 성립.
+%%   - 둘 다 평탄하면 sleep(1) 이 지배적이고 부하 측정 자체를 다시 설계해야 함.

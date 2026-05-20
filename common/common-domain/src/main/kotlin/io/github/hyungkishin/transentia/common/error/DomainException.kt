@@ -9,5 +9,5 @@ package io.github.hyungkishin.transentia.common.error
 open class DomainException(
     val error: DomainError,
     val detail: String? = null,
-    cause: Throwable? = null
+    cause: Throwable? = null,
 ) : RuntimeException(error.message, cause)

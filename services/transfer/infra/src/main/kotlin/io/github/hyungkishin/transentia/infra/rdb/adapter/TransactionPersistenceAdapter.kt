@@ -8,13 +8,9 @@ import org.springframework.stereotype.Component
 
 @Component
 class TransactionPersistenceAdapter(
-    private val jpaRepository: TransactionJpaRepository
+    private val jpaRepository: TransactionJpaRepository,
 ) : TransactionRepository {
+    override fun findById(id: Long): Transaction? = jpaRepository.findById(id).orElse(null)?.toDomain()
 
-    override fun findById(id: Long): Transaction? =
-        jpaRepository.findById(id).orElse(null)?.toDomain()
-
-    override fun save(transaction: Transaction): Transaction =
-        jpaRepository.save(TransactionJpaEntity.from(transaction)).toDomain()
-
+    override fun save(transaction: Transaction): Transaction = jpaRepository.save(TransactionJpaEntity.from(transaction)).toDomain()
 }

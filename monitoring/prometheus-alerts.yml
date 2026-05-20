@@ -1,0 +1,264 @@
+groups:
+  - name: transentia-availability
+    interval: 30s
+    rules:
+      - alert: TransferApiDown
+        expr: up{service="transfer-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "Transfer API 인스턴스 다운 ({{ $labels.instance }})"
+          description: "1분 이상 /actuator/prometheus 스크랩 실패. 단일 인스턴스라면 전체 송금 중단."
+
+      - alert: FdsApiDown
+        expr: up{service="fds-api"} == 0
+        for: 1m
+        labels:
+          severity: high
+          team: backend
+        annotations:
+          summary: "FDS API 인스턴스 다운"
+          description: "이상거래 탐지 파이프라인 중단. 룰 평가 정지. 즉시 복구."
+
+      - alert: TransferRelayDown
+        expr: up{service="transfer-relay"} == 0
+        for: 2m
+        labels:
+          severity: high
+          team: backend
+        annotations:
+          summary: "Transfer Relay 인스턴스 다운 ({{ $labels.instance }})"
+          description: "Outbox 발행 지연 누적 위험. 파티셔닝 가정(MOD n)이 깨질 수 있음."
+
+  - name: transentia-resilience
+    interval: 30s
+    rules:
+      - alert: RedisCircuitBreakerOpen
+        expr: resilience4j_circuitbreaker_state{name="redis", state="open"} == 1
+        for: 30s
+        labels:
+          severity: high
+          team: backend
+        annotations:
+          summary: "Redis Circuit Breaker OPEN"
+          description: "Redis 일일 한도 캐시 장애. fallback 으로 한도 검증이 fail-open. 즉시 Redis 점검 + 정책 결정."
+
+      - alert: RedisFallbackHighRate
+        expr: rate(redis_daily_limit_fallback_total[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Redis fallback 호출률 높음 ({{ $value }}/s)"
+          description: "5분간 fallback 호출이 1/s 초과. Redis latency 또는 가용성 문제."
+
+  - name: transentia-latency
+    interval: 30s
+    rules:
+      - alert: TransferP95LatencyHigh
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_server_requests_seconds_bucket{service="transfer-api", uri=~"/api/transfers.*"}[5m]))
+            by (le)
+          ) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "송금 API p95 지연 {{ $value }}s"
+          description: "지속 5분 p95 > 500ms. DB 락 경합 / Redis 지연 / Kafka producer 지연 가능성."
+
+      - alert: FdsAnalyzeP95Slow
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(fds_analyze_duration_seconds_bucket[5m])) by (le)
+          ) > 0.3
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "FDS analyze p95 {{ $value }}s"
+          description: "룰 평가가 평소보다 느림. RecentTransferCountQuery DB 쿼리 또는 ML 어댑터 지연 가능성."
+
+  - name: transentia-error-rate
+    interval: 30s
+    rules:
+      - alert: TransferApi5xxHigh
+        expr: |
+          (
+            sum(rate(http_server_requests_seconds_count{service="transfer-api", status=~"5.."}[5m]))
+            /
+            sum(rate(http_server_requests_seconds_count{service="transfer-api"}[5m]))
+          ) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "Transfer API 5xx 비율 {{ $value | humanizePercentage }}"
+          description: "5분간 1% 초과. DLQ / 알림 채널 미구현 상태라 회복 자동화 없음."
+
+  - name: transentia-dlq
+    interval: 30s
+    rules:
+      - alert: DlqDeadLetterPresent
+        expr: dlq_dead_letter_count > 0
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "DLQ 에 {{ $value }} 건 DEAD_LETTER 잔존"
+          description: "DLQ Retry Worker 가 부활 시도하지만 cool-down(기본 60분) 안에 누적된 상황. 영구 원인 검토 필요."
+
+      - alert: DlqDeadLetterHigh
+        expr: dlq_dead_letter_count > 100
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "DLQ DEAD_LETTER {{ $value }} 건 (임계 초과)"
+          description: "단순 일시적 장애가 아닌 시스템적 문제 가능. Outbox 발행 경로 / Kafka 가용성 / 메시지 포맷 점검."
+
+  - name: transentia-outbox
+    interval: 30s
+    rules:
+      - alert: OutboxLagGrowing
+        expr: outbox_pending_count > 1000
+        for: 3m
+        labels:
+          severity: high
+          team: backend
+        annotations:
+          summary: "Outbox PENDING {{ $value }} 건"
+          description: "Relay 가 송금 속도를 못 따라감. 인스턴스 수 / 파티션 수 점검."
+
+      - alert: OutboxOldestPendingTooOld
+        expr: outbox_oldest_pending_seconds > 60
+        for: 2m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "Outbox 최고령 PENDING {{ $value }}초"
+          description: "1분 이상 발행 대기. Kafka producer 장애 또는 Relay 전원 다운 가능성."
+
+  - name: transentia-jvm
+    interval: 30s
+    rules:
+      - alert: JvmHeapHigh
+        expr: jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"} > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "{{ $labels.service }} JVM heap {{ $value | humanizePercentage }}"
+          description: "Full GC 임박. heap dump 확보 + 인스턴스 추가 검토."
+
+      - alert: JvmGcTimeHigh
+        expr: rate(jvm_gc_pause_seconds_sum[1m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "{{ $labels.service }} GC pause 시간 비율 높음"
+          description: "초당 100ms 이상 GC pause. 메모리 leak 가능."
+
+  - name: transentia-kafka
+    interval: 30s
+    rules:
+      - alert: KafkaConsumerLagHigh
+        expr: kafka_consumer_fetch_manager_records_lag_max > 10000
+        for: 5m
+        labels:
+          severity: high
+          team: backend
+        annotations:
+          summary: "Kafka consumer lag {{ $value }} 건 ({{ $labels.client_id }})"
+          description: "FDS 분석 지연. 처리 토픽 partition 수 / consumer thread 수 점검."
+
+  # ============================================
+  # Phase 전환 트리거 (ADR-010 / EVOLUTION-ROADMAP)
+  # 운영자에게 다음 phase 로 진화할 시점을 알린다.
+  # ============================================
+  - name: transentia-phase-evolution
+    interval: 1m
+    rules:
+      - alert: PhaseEvolution_OutboxPendingHigh
+        expr: outbox_pending_count > 500
+        for: 1h
+        labels:
+          severity: warning
+          team: backend
+          phase_transition: "1-to-2"
+        annotations:
+          summary: "Outbox PENDING p95 > 500 sustained 1h ({{ $value }})"
+          description: "Phase 1 의 폴링 빈도가 트래픽을 따라가지 못함. EVOLUTION-ROADMAP 의 Phase 2 (Polling 튜닝 — 인스턴스 3→5, 폴링 1s→200ms, 배치 1K→5K) 검토 시점. ROI 최고 (작업 1주)."
+
+      - alert: PhaseEvolution_OutboxLagHigh
+        expr: outbox_oldest_pending_seconds > 5
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+          phase_transition: "1-to-2"
+        annotations:
+          summary: "Outbox 최고령 PENDING > 5s sustained ({{ $value }}s)"
+          description: "Phase 2 튜닝 즉시 적용 권장. ADR-010 의 전환 트리거 기준."
+
+      - alert: PhaseEvolution_ConsiderCDC
+        expr: outbox_oldest_pending_seconds > 30
+        for: 10m
+        labels:
+          severity: critical
+          team: backend
+          phase_transition: "2-to-3"
+        annotations:
+          summary: "Outbox 최고령 PENDING p99 > 30s ({{ $value }}s) — Phase 3 CDC 검토"
+          description: "Polling 튜닝(Phase 2)의 한계 도달 가능성. EVOLUTION-ROADMAP 의 Phase 3 (Debezium CDC PoC) 시작 시점. E5 실험 패키지 실행 필요. 작업 1~2달."
+
+      - alert: PhaseEvolution_DBCpuFromPolling
+        expr: |
+          (
+            rate(pg_stat_statements_total_time_seconds{query=~".*transfer_events.*PENDING.*"}[5m])
+            /
+            rate(pg_stat_statements_total_time_seconds[5m])
+          ) > 0.30
+        for: 30m
+        labels:
+          severity: warning
+          team: backend
+          phase_transition: "2-to-3"
+        annotations:
+          summary: "DB CPU 의 {{ $value | humanizePercentage }} 가 outbox 폴링"
+          description: "Phase 3 (CDC) 전환 트리거. 폴링 부하 자체가 DB 의 주된 부담이 된 상태. NOTE: pg_stat_statements exporter 셋업 필요."
+
+      - alert: PhaseEvolution_ConsiderTxProducer
+        expr: rate(kafka_producer_record_send_total[5m]) > 10000
+        for: 30m
+        labels:
+          severity: info
+          team: backend
+          phase_transition: "3-to-4"
+        annotations:
+          summary: "Kafka producer rate > 10K/s sustained 30m"
+          description: "Phase 4 (Kafka Transactional Producer + Outbox 제거) 검토. p99 latency 요구가 100ms 이하라면 즉시. EVOLUTION-ROADMAP Phase 4."
+
+      - alert: PhaseEvolution_KafkaConnectSlotLag
+        expr: pg_replication_slot_lag_bytes > 1073741824   # 1 GB
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+          phase: "3"
+        annotations:
+          summary: "PostgreSQL replication slot lag > 1GB ({{ $value }} bytes)"
+          description: "Phase 3 (CDC) 운영 중 Debezium 의 slot 이 따라가지 못함. WAL 디스크 폭증 위험. Connect 클러스터 즉시 점검. NOTE: postgres_exporter 셋업 필요."

@@ -16,28 +16,26 @@ import org.springframework.stereotype.Component
 @Component
 class TransferOutboxJobLauncher(
     private val jobLauncher: JobLauncher,
-    private val transferOutboxJob: Job
+    private val transferOutboxJob: Job,
 ) {
-
     private val log = LoggerFactory.getLogger(javaClass)
 
     @Scheduled(
         fixedDelayString = "\${app.outbox.relay.fixedDelayMs:2000}",
-        initialDelayString = "\${app.outbox.relay.initialDelayMs:5000}"
+        initialDelayString = "\${app.outbox.relay.initialDelayMs:5000}",
     )
     fun runJob() {
         try {
-            val jobParameters = JobParametersBuilder()
-                .addLong("timestamp", System.currentTimeMillis())
-                .toJobParameters()
+            val jobParameters =
+                JobParametersBuilder()
+                    .addLong("timestamp", System.currentTimeMillis())
+                    .toJobParameters()
 
             val jobExecution = jobLauncher.run(transferOutboxJob, jobParameters)
 
             log.debug("Job 실행 완료: {}", jobExecution.exitStatus.exitCode)
-
         } catch (e: Exception) {
             log.error("Job 실행 실패", e)
         }
     }
-
 }

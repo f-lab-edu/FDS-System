@@ -1,0 +1,43 @@
+flowchart TB
+    subgraph Inst[instances/api<br/>Spring Boot Main]
+        Boot[Spring Boot 부트스트랩]:::inst
+        Controller[REST Controllers]:::inst
+    end
+
+    subgraph App[application<br/>Use Cases + Ports]
+        UC[TransactionService<br/>AnalyzeTransferService]:::app
+        ProvP[provided port<br/>TransactionRegister]:::port
+        ReqP[required port<br/>TransactionRepository<br/>DailyTransferAmountCachePort<br/>AiScoreProvider<br/>RecentTransferCountQueryPort]:::port
+    end
+
+    subgraph Dom[domain<br/>순수 비즈니스 로직]
+        Entities[Transaction / User / RiskLog<br/>AccountBalance / Money]:::dom
+        Validators[TransferValidator<br/>FraudRule 평가]:::dom
+        Events[TransferCompleted<br/>TransferCompleteEvent]:::dom
+    end
+
+    subgraph Infra[infra<br/>외부 시스템 어댑터]
+        JpaAdapter[JPA 어댑터<br/>TransactionPersistenceAdapter<br/>RiskAnalysisPersistenceAdapter]:::infra
+        RedisAdapter[Redis 어댑터<br/>RedisDailyTransferAmountCacheAdapter]:::infra
+        KafkaAdapter[Kafka 어댑터<br/>TransferEventConsumer<br/>SuspiciousPatternAlertConsumer]:::infra
+    end
+
+    Controller --> UC
+    UC --> Entities
+    UC --> Validators
+    UC --> ReqP
+    UC -.->|구현| ProvP
+    ReqP -.->|implements| JpaAdapter
+    ReqP -.->|implements| RedisAdapter
+    ReqP -.->|implements| KafkaAdapter
+
+    Boot --> Controller
+    Boot --> JpaAdapter
+    Boot --> RedisAdapter
+    Boot --> KafkaAdapter
+
+    classDef inst fill:#fef3c7,stroke:#a16207,color:#713f12
+    classDef app fill:#dcfce7,stroke:#15803d,color:#14532d
+    classDef port fill:#dbeafe,stroke:#1e40af,color:#1e3a8a,stroke-dasharray: 4 2
+    classDef dom fill:#fce7f3,stroke:#be185d,color:#831843
+    classDef infra fill:#e0e7ff,stroke:#4f46e5,color:#312e81

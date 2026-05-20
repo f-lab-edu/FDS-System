@@ -48,6 +48,9 @@ class SpringBootAppConventionPlugin : Plugin<Project> {
             add("implementation", "io.micrometer:micrometer-registry-prometheus")
             add("implementation", "io.micrometer:micrometer-tracing-bridge-otel")
 
+            // JSON 로깅 (ELK 연동)
+            add("implementation", "net.logstash.logback:logstash-logback-encoder:7.4")
+
             add("testImplementation", "org.springframework.boot:spring-boot-starter-test")
         }
 

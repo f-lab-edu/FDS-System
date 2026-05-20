@@ -1,0 +1,26 @@
+sequenceDiagram
+    autonumber
+    participant Client as 클라이언트
+    participant TransferAPI as Transfer-API
+    participant Async as @Async Worker
+    participant Kafka as Kafka
+    participant Streams as FDS Kafka Streams
+    participant FraudDB as fraud_detections
+
+    Client->>TransferAPI: POST /transfer<br/>X-Trace-Id=t1
+    Note over TransferAPI: MDC put traceId=t1<br/>Observation start
+    TransferAPI->>TransferAPI: validate + @Transactional<br/>(log: traceId=t1)
+
+    TransferAPI->>Async: publishEvent<br/>(@TransactionalEventListener AFTER_COMMIT)
+    Note over Async: ContextPropagatingTaskDecorator<br/>가 MDC traceId=t1 복사
+
+    Async->>Kafka: produce(record, headers: traceparent=t1)
+    Note over Kafka: traceparent 헤더에 t1 보존
+
+    Kafka->>Streams: consume(record)
+    Note over Streams: TracingTransformer 가<br/>header 에서 traceparent 추출<br/>→ MDC put traceId=t1
+
+    Streams->>Streams: analyze rule(log: traceId=t1)
+    Streams->>FraudDB: INSERT fraud_detections<br/>(trace_id=t1)
+
+    Note over Client,FraudDB: 단일 traceId=t1 로 전체 흐름 추적 가능<br/>Kibana 에서 traceId:t1 검색

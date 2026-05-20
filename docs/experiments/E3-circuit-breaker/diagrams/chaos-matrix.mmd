@@ -1,0 +1,71 @@
+%% E3 Chaos Scenario Matrix
+%% Redis Circuit Breaker chaos 실험의 시나리오 흐름과 CB 상태 전이.
+%% 각 시나리오(C1~C5)와 그에 대응하는 Resilience4j CB 상태 변화를 표현한다.
+
+flowchart TB
+    subgraph Tools["chaos 도구"]
+        TX["Toxiproxy<br/>Redis 앞단 latency/timeout 주입"]
+        PB["Pumba<br/>Redis 컨테이너 SIGKILL"]
+        K6["k6<br/>송금 부하 + RT 측정"]
+    end
+
+    subgraph Scenarios["chaos 시나리오 매트릭스"]
+        C1["C1 — 베이스라인<br/>Toxiproxy pass-through<br/>Redis 정상"]
+        C2["C2 — 경계 부하<br/>Redis +500ms latency<br/>(failure-rate 임계 미만)"]
+        C3["C3 — 명확한 장애<br/>Redis +2s latency<br/>(timeout 유발)"]
+        C4["C4 — 영구 장애<br/>pumba kill -s SIGKILL redis<br/>(연결 자체 실패)"]
+        C5["C5 — 회복 시나리오<br/>정상 → C3 주입 → 정상<br/>(t_open / t_redis_ok / t_closed 측정)"]
+    end
+
+    subgraph CBStates["Resilience4j CB 상태 전이 (예상)"]
+        S_CLOSED(["CLOSED<br/>요청 통과"])
+        S_OPEN(["OPEN<br/>즉시 fallback<br/>(wait 10s)"])
+        S_HALF(["HALF_OPEN<br/>3회 시험"])
+    end
+
+    subgraph Hypotheses["검증 가설"]
+        H1["H1<br/>CB 미적용 시 p95 >= 10s"]
+        H2["H2<br/>OPEN 동안 p95 <= 200ms"]
+        H3["H3<br/>회복 시간<br/>(t_closed - t_redis_ok) <= 30s"]
+        H4["H4<br/>fail-open 비용 측정 가능"]
+    end
+
+    TX --> C1
+    TX --> C2
+    TX --> C3
+    PB --> C4
+    TX --> C5
+    K6 --> C1
+    K6 --> C2
+    K6 --> C3
+    K6 --> C4
+    K6 --> C5
+
+    C1 --> S_CLOSED
+    C2 --> S_CLOSED
+    C3 --> S_CLOSED
+    C3 -. "failure-rate >= 50%<br/>이후 OPEN 전이" .-> S_OPEN
+    C4 --> S_OPEN
+    C5 --> S_CLOSED
+    S_CLOSED -. "C5: 장애 주입" .-> S_OPEN
+    S_OPEN -. "wait 10s 경과<br/>(automatic transition)" .-> S_HALF
+    S_HALF -. "3회 모두 성공" .-> S_CLOSED
+    S_HALF -. "1회라도 실패" .-> S_OPEN
+
+    S_CLOSED --> H2
+    S_OPEN --> H2
+    S_OPEN --> H4
+    C1 --> H1
+    C3 --> H1
+    C4 --> H1
+    C5 --> H3
+
+    classDef scenario fill:#fef3c7,stroke:#92400e,stroke-width:1px,color:#1f2937
+    classDef tool fill:#dbeafe,stroke:#1e40af,stroke-width:1px,color:#1f2937
+    classDef state fill:#dcfce7,stroke:#166534,stroke-width:1px,color:#1f2937
+    classDef hypothesis fill:#fce7f3,stroke:#9d174d,stroke-width:1px,color:#1f2937
+
+    class C1,C2,C3,C4,C5 scenario
+    class TX,PB,K6 tool
+    class S_CLOSED,S_OPEN,S_HALF state
+    class H1,H2,H3,H4 hypothesis

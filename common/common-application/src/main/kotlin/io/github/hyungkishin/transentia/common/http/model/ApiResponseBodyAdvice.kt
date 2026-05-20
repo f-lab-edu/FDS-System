@@ -19,16 +19,15 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 @RestControllerAdvice
 @Component
 class ApiResponseBodyAdvice(
-    private val customizers: List<ApiResponseCustomizer> = emptyList()
+    private val customizers: List<ApiResponseCustomizer> = emptyList(),
 ) : ResponseBodyAdvice<Any> {
-
     override fun supports(
         returnType: MethodParameter,
-        converterType: Class<out HttpMessageConverter<*>>
+        converterType: Class<out HttpMessageConverter<*>>,
     ): Boolean {
         val noWrap =
             returnType.containingClass.isAnnotationPresent(NoWrap::class.java) ||
-                    returnType.hasMethodAnnotation(NoWrap::class.java)
+                returnType.hasMethodAnnotation(NoWrap::class.java)
         if (noWrap) return false
 
         val clazz = returnType.parameterType
@@ -47,7 +46,7 @@ class ApiResponseBodyAdvice(
         selectedContentType: MediaType,
         selectedConverterType: Class<out HttpMessageConverter<*>>,
         request: ServerHttpRequest,
-        response: ServerHttpResponse
+        response: ServerHttpResponse,
     ): Any? {
         val req = request as? ServletServerHttpRequest
         val resp = response as? ServletServerHttpResponse

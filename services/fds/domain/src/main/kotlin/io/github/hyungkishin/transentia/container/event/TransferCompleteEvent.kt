@@ -11,5 +11,5 @@ data class TransferCompleteEvent(
     val receiverId: Long,
     val amount: Long,
     val status: String,
-    val occurredAt: Instant
+    val occurredAt: Instant,
 )

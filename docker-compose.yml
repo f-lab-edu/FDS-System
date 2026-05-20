@@ -1,4 +1,16 @@
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: transfer-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   postgres:
     image: postgres:15
     container_name: transfer-postgres
@@ -72,9 +84,12 @@ services:
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry:8081
     depends_on:
       kafka:
         condition: service_healthy
+      schema-registry:
+        condition: service_started
 
   schema-registry:
     image: confluentinc/cp-schema-registry:7.6.0
@@ -98,6 +113,7 @@ services:
       - "9090:9090"
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus-alerts.yml:/etc/prometheus/prometheus-alerts.yml
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -105,6 +121,26 @@ services:
       - '--storage.tsdb.retention.time=30d'
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      - alertmanager
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: transfer-alertmanager
+    restart: unless-stopped
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager/config.yml:/etc/alertmanager/alertmanager.yml
+      - alertmanager_data:/alertmanager
+    environment:
+      # 운영에선 docker secret 또는 외부 secret manager 사용.
+      # 데모: 빈 파일로 두면 Slack 전송 실패만 로그에 남고 alertmanager 자체는 동작.
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
 
   grafana:
     image: grafana/grafana:latest
@@ -118,14 +154,133 @@ services:
       - GF_INSTALL_PLUGINS=grafana-piechart-panel
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
     depends_on:
       - prometheus
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: transfer-elasticsearch
+    restart: unless-stopped
+    ports:
+      - "9200:9200"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q status"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  es-init:
+    image: alpine:3.20
+    container_name: transfer-es-init
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        apk add --no-cache bash python3 curl >/dev/null
+        ES_URL=http://elasticsearch:9200 bash /init/init.sh
+    volumes:
+      - ./monitoring/elasticsearch:/init
+    restart: "no"
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: transfer-kibana
+    restart: unless-stopped
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  transfer-api:
+    build:
+      context: ./services/transfer/instances/api
+      dockerfile: Dockerfile
+    container_name: transfer-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      LOG_PATH: /var/log/apps
+      SNOWFLAKE_NODE_ID: 1
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+    volumes:
+      - ./logs:/var/log/apps
+    depends_on:
+      kafka:
+        condition: service_healthy
+      schema-registry:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  fds-api:
+    build:
+      context: ./services/fds/instances/api
+      dockerfile: Dockerfile
+    container_name: fds-api
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      LOG_PATH: /var/log/apps
+    volumes:
+      - ./logs:/var/log/apps
+    depends_on:
+      kafka:
+        condition: service_healthy
+      schema-registry:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8082/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.11.0
+    container_name: transfer-filebeat
+    restart: unless-stopped
+    user: root
+    volumes:
+      - ./monitoring/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ./logs:/var/log/apps:ro
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    command: filebeat -e -strict.perms=false
 
 volumes:
   pg_data:
   kafka_data:
   prometheus_data:
+  alertmanager_data:
   grafana_data:
+  es_data:
 
 networks:
   default:

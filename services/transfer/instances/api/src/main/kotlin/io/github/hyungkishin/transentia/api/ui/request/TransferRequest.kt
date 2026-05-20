@@ -12,6 +12,5 @@ data class TransferRequest(
     @field:NotNull val message: String,
     @field:NotNull val currency: Currency,
 ) {
-    fun toCommand(): TransferRequestCommand =
-        TransferRequestCommand(senderAccountNumber, receiverAccountNumber, amount, currency, message)
+    fun toCommand(): TransferRequestCommand = TransferRequestCommand(senderAccountNumber, receiverAccountNumber, amount, currency, message)
 }

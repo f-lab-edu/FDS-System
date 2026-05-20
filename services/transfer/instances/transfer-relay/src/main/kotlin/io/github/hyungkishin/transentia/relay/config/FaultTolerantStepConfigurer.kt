@@ -3,11 +3,11 @@ package io.github.hyungkishin.transentia.relay.config
 import io.github.hyungkishin.transentia.relay.exception.InvalidEventDataException
 import io.github.hyungkishin.transentia.relay.exception.NonRetryableKafkaException
 import io.github.hyungkishin.transentia.relay.exception.RetryableKafkaException
+import java.net.SocketTimeoutException
+import java.util.concurrent.TimeoutException
 import org.springframework.batch.core.step.builder.FaultTolerantStepBuilder
 import org.springframework.retry.backoff.ExponentialBackOffPolicy
 import org.springframework.stereotype.Component
-import java.net.SocketTimeoutException
-import java.util.concurrent.TimeoutException
 
 /**
  * Spring Batch FaultTolerant 정책 설정
@@ -24,20 +24,16 @@ import java.util.concurrent.TimeoutException
  */
 @Component
 class FaultTolerantStepConfigurer(
-    private val config: OutboxRelayConfig
+    private val config: OutboxRelayConfig,
 ) {
-
     /**
      * FaultTolerant 정책 적용
      *
      * @param builder Step의 FaultTolerantStepBuilder
      * @return 정책이 적용된 builder
      */
-    fun <I, O> configure(
-        builder: FaultTolerantStepBuilder<I, O>
-    ): FaultTolerantStepBuilder<I, O> {
-
-        return builder.apply {
+    fun <I, O> configure(builder: FaultTolerantStepBuilder<I, O>): FaultTolerantStepBuilder<I, O> =
+        builder.apply {
             // Retry 정책
             configureRetryPolicy()
 
@@ -47,8 +43,6 @@ class FaultTolerantStepConfigurer(
             // NoRetry / NoSkip 정책
             configureNoRetryPolicy()
         }
-
-    }
 
     /**
      * Retry 정책 설정
@@ -61,10 +55,10 @@ class FaultTolerantStepConfigurer(
         retry(RetryableKafkaException::class.java)
         retry(TimeoutException::class.java)
         retry(SocketTimeoutException::class.java)
-        
+
         // 최대 재시도 횟수
         retryLimit(config.maxAttempts)
-        
+
         // 지수 백오프 정책
         backOffPolicy(exponentialBackOffPolicy())
     }
@@ -105,12 +99,10 @@ class FaultTolerantStepConfigurer(
      * - 배수: 2배
      * - 최대 대기: 60초
      */
-    private fun exponentialBackOffPolicy(): ExponentialBackOffPolicy {
-        return ExponentialBackOffPolicy().apply {
+    private fun exponentialBackOffPolicy(): ExponentialBackOffPolicy =
+        ExponentialBackOffPolicy().apply {
             initialInterval = config.baseBackoffMs
             multiplier = 2.0
-            maxInterval = 60000  // 60초
+            maxInterval = 60000 // 60초
         }
-    }
-
 }

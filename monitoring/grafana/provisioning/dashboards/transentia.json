@@ -1,0 +1,181 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "title": "송금 TPS (transfer-api)",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{service=\"transfer-api\", uri=~\"/api/transfers.*\"}[1m]))",
+          "legendFormat": "TPS"
+        }
+      ],
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "reqps"}}
+    },
+    {
+      "title": "송금 API p50/p95/p99 latency",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "histogram_quantile(0.50, sum(rate(http_server_requests_seconds_bucket{service=\"transfer-api\", uri=~\"/api/transfers.*\"}[5m])) by (le))", "legendFormat": "p50"},
+        {"expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{service=\"transfer-api\", uri=~\"/api/transfers.*\"}[5m])) by (le))", "legendFormat": "p95"},
+        {"expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{service=\"transfer-api\", uri=~\"/api/transfers.*\"}[5m])) by (le))", "legendFormat": "p99"}
+      ],
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "s"}}
+    },
+    {
+      "title": "Transfer API 5xx 비율",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{service=\"transfer-api\", status=~\"5..\"}[5m])) / sum(rate(http_server_requests_seconds_count{service=\"transfer-api\"}[5m]))",
+          "legendFormat": "5xx ratio"
+        }
+      ],
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 8},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 0.005},
+              {"color": "red", "value": 0.01}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Redis Circuit Breaker 상태",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "resilience4j_circuitbreaker_state{name=\"redis\"}", "legendFormat": "{{state}}"}
+      ],
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 8},
+      "fieldConfig": {"defaults": {"mappings": [{"options": {"0": {"text": "CLOSED"}, "1": {"text": "OPEN"}}, "type": "value"}]}}
+    },
+    {
+      "title": "Redis Fallback 호출률 (5m rate)",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "rate(redis_daily_limit_fallback_total[5m])", "legendFormat": "fallback/s"}
+      ],
+      "gridPos": {"h": 4, "w": 12, "x": 12, "y": 8},
+      "fieldConfig": {"defaults": {"unit": "ops"}}
+    },
+    {
+      "title": "FDS Decision 분포 (RAPID_TRANSFER / HIGH_AMOUNT / ...)",
+      "type": "piechart",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "sum by (decision) (increase(fds_decisions_total[1h]))", "legendFormat": "{{decision}}"}
+      ],
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12}
+    },
+    {
+      "title": "FDS analyze p95 latency",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum(rate(fds_analyze_duration_seconds_bucket[5m])) by (le))", "legendFormat": "p95"}
+      ],
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+      "fieldConfig": {"defaults": {"unit": "s"}}
+    },
+    {
+      "title": "Outbox PENDING 건수 (Phase 전환 임계 표시)",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "outbox_pending_count", "legendFormat": "pending"}
+      ],
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 500},
+              {"color": "red", "value": 5000}
+            ]
+          },
+          "custom": {"thresholdsStyle": {"mode": "line+area"}}
+        }
+      }
+    },
+    {
+      "title": "Outbox 최고령 PENDING (초) — Phase 전환 트리거",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "outbox_oldest_pending_seconds", "legendFormat": "oldest age"}
+      ],
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 5},
+              {"color": "red", "value": 30}
+            ]
+          },
+          "custom": {"thresholdsStyle": {"mode": "line+area"}}
+        },
+        "overrides": []
+      },
+      "description": "5s warning(Phase 2 튜닝), 30s critical(Phase 3 CDC 검토) — ADR-010"
+    },
+    {
+      "title": "Kafka consumer lag (max)",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "max by (client_id) (kafka_consumer_fetch_manager_records_lag_max)", "legendFormat": "{{client_id}}"}
+      ],
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 28}
+    },
+    {
+      "title": "JVM Heap 사용률 (서비스별)",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "jvm_memory_used_bytes{area=\"heap\"} / jvm_memory_max_bytes{area=\"heap\"}", "legendFormat": "{{service}}/{{instance}}"}
+      ],
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 28},
+      "fieldConfig": {"defaults": {"unit": "percentunit", "max": 1, "min": 0}}
+    },
+    {
+      "title": "GC pause time (rate)",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "rate(jvm_gc_pause_seconds_sum[1m])", "legendFormat": "{{service}}"}
+      ],
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 36},
+      "fieldConfig": {"defaults": {"unit": "s"}}
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "tags": ["transentia", "fds", "transfer"],
+  "templating": {"list": []},
+  "time": {"from": "now-1h", "to": "now"},
+  "timezone": "Asia/Seoul",
+  "title": "Transentia Overview",
+  "uid": "transentia-overview",
+  "version": 1
+}

@@ -10,9 +10,10 @@ dependencies {
 
     implementation("org.flywaydb:flyway-database-postgresql")
     implementation("org.flywaydb:flyway-core")
+    implementation("org.springframework.boot:spring-boot-starter-jdbc")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
-    
+
     // Apache HttpClient 5 for Connection Pool testing (Spring Boot 3.x uses HttpClient 5)
     testImplementation("org.apache.httpcomponents.client5:httpclient5:5.2.1")
 }

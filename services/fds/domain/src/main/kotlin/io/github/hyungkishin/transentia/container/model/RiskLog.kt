@@ -12,13 +12,11 @@ class RiskLog private constructor(
     val txId: Long,
     val decision: FinalDecisionType,
     val reasons: List<String>,
-
-    // TODO: ai Score 구체화 필요
+    /** AiScoreProvider 가 채운 ML 기반 점수(0.0~1.0). 미구현 어댑터(NoOp) 면 null. */
     val aiScore: Double?,
     val evaluatedAt: Instant,
-    val ruleHits: List<RiskRuleHit>
+    val ruleHits: List<RiskRuleHit>,
 ) {
-
     init {
         if (aiScore != null) require(aiScore in 0.0..100.0) { "aiScore 범위는 0~100" }
     }
@@ -30,17 +28,16 @@ class RiskLog private constructor(
             reasons: List<String>,
             aiScore: Double?,
             ruleHits: List<RiskRuleHit>,
-            evaluatedAt: Instant = Instant.now()
-        ): RiskLog {
-            return RiskLog(
+            evaluatedAt: Instant = Instant.now(),
+        ): RiskLog =
+            RiskLog(
                 id = null,
                 txId = txId,
                 decision = decision,
                 reasons = reasons.distinct().take(10), // 과도한 사유가 걸릴경우 간단한 사유로 제한 (최대 10개)
                 aiScore = aiScore,
                 evaluatedAt = evaluatedAt,
-                ruleHits = ruleHits.toList()
+                ruleHits = ruleHits.toList(),
             )
-        }
     }
 }

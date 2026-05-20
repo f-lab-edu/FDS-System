@@ -1,0 +1,20 @@
+%% Phase 4 — Kafka Transactional Producer (30K ~ 100K TPS)
+flowchart LR
+    Client[클라이언트]:::client
+    API["Transfer-API<br/>@Transactional<br/>+ KafkaTransactional"]:::svc
+    PG[(PostgreSQL<br/>transactions 만)]:::store
+    K{{"Kafka<br/>read_committed only<br/>exactly_once_v2"}}:::queue
+    FDS[FDS-API]:::svc
+
+    Client -->|POST /transfer| API
+    API -->|tx 안에서 동시 발행| PG
+    API -.->|"같은 Kafka tx"| K
+    K --> FDS
+
+    note["전환 결정<br/>Outbox 테이블 완전 제거<br/>비용: 컨슈머 lag +30%, throughput -20%<br/>이득: 토폴로지 단순화, DB write -40%<br/>위험: 분산 트랜잭션 일관성 추론 어려움"]:::note
+
+    classDef client fill:#dbeafe,stroke:#1e40af,color:#1e3a8a
+    classDef svc fill:#dcfce7,stroke:#15803d,color:#14532d
+    classDef store fill:#fee2e2,stroke:#b91c1c,color:#7f1d1d
+    classDef queue fill:#e0e7ff,stroke:#4f46e5,color:#312e81
+    classDef note fill:#f3f4f6,stroke:#6b7280,color:#374151

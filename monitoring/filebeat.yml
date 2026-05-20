@@ -1,0 +1,52 @@
+filebeat.inputs:
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/apps/*.log
+    exclude_files: ['.*access.*\.log$']
+    json.keys_under_root: true
+    json.add_error_key: true
+    json.message_key: message
+    fields:
+      log_type: app
+      environment: local
+    fields_under_root: true
+
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/apps/*access*.log
+    json.keys_under_root: true
+    json.add_error_key: true
+    fields:
+      log_type: access
+      environment: local
+    fields_under_root: true
+
+output.elasticsearch:
+  hosts: ["elasticsearch:9200"]
+  indices:
+    - index: "access-logs-%{+yyyy.MM.dd}"
+      when.equals:
+        log_type: "access"
+    - index: "app-logs-%{+yyyy.MM.dd}"
+      when.equals:
+        log_type: "app"
+
+# ILM 정책 + 인덱스 템플릿은 monitoring/elasticsearch/ 에서 별도 관리.
+# init.sh 가 ES 부팅 후 정책/템플릿을 등록한다. Filebeat 자체는 정책에 관여하지 않음.
+setup.ilm.enabled: false
+setup.template.enabled: false
+
+processors:
+  - add_host_metadata:
+      when.not.contains.tags: forwarded
+  - timestamp:
+      field: "@timestamp"
+      layouts:
+        - '2006-01-02T15:04:05.999Z07:00'
+      test:
+        - '2026-01-01T12:00:00.000+09:00'
+
+logging.level: info
+logging.to_files: false

@@ -16,6 +16,10 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.25")
     implementation("org.springframework.boot:spring-boot-gradle-plugin:3.3.2")
     implementation("io.spring.gradle:dependency-management-plugin:1.1.7")
+
+    // 코드 품질 자동화 — detekt + ktlint
+    implementation("io.gitlab.arturbosch.detekt:detekt-gradle-plugin:1.23.6")
+    implementation("org.jlleitschuh.gradle:ktlint-gradle:12.1.1")
 }
 
 gradlePlugin {
@@ -55,6 +59,12 @@ gradlePlugin {
         create("kafkaConventionPlugin") {
             id = "transentia.kafka-convention"
             implementationClass = "transentia.KafkaConventionPlugin"
+        }
+
+        // 코드 품질 (detekt + ktlint)
+        create("codeQualityPlugin") {
+            id = "transentia.code-quality"
+            implementationClass = "transentia.CodeQualityConventionPlugin"
         }
     }
 }
