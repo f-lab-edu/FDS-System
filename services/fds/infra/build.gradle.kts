@@ -4,6 +4,7 @@ plugins {
     id("transentia.kafka-convention")
     id("transentia.code-coverage")
     id("io.spring.dependency-management")
+    `java-test-fixtures`
 }
 
 dependencyManagement {
@@ -38,9 +39,13 @@ dependencies {
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.kafka:spring-kafka-test")
-    testImplementation(platform("org.testcontainers:testcontainers-bom:1.20.4"))
-    testImplementation("org.testcontainers:junit-jupiter")
-    testImplementation("org.testcontainers:postgresql")
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
+    testImplementation(testFixtures(project(":fds-infra")))
     testRuntimeOnly("org.postgresql:postgresql")
+
+    testFixturesImplementation(platform("org.testcontainers:testcontainers-bom:1.20.4"))
+    testFixturesImplementation("org.testcontainers:testcontainers")
+    testFixturesImplementation("org.testcontainers:junit-jupiter")
+    testFixturesImplementation("org.testcontainers:postgresql")
+    testFixturesImplementation("org.springframework.boot:spring-boot-starter-data-jpa")
 }

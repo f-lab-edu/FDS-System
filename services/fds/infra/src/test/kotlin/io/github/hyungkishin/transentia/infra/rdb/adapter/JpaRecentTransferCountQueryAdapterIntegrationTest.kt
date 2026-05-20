@@ -1,6 +1,6 @@
 package io.github.hyungkishin.transentia.infra.rdb.adapter
 
-import io.github.hyungkishin.transentia.infra.support.PostgresIntegrationTestBase
+import io.github.hyungkishin.transentia.infra.testcontainers.PostgresTestContainersConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.context.annotation.Import
 import org.springframework.jdbc.core.JdbcTemplate
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -16,8 +17,9 @@ import java.time.temporal.ChronoUnit
     classes = [JpaRecentTransferCountQueryAdapterIntegrationTest.TestApp::class],
     properties = ["spring.main.allow-bean-definition-overriding=true"]
 )
+@Import(PostgresTestContainersConfig::class)
 @DisplayName("JpaRecentTransferCountQueryAdapter 통합 테스트")
-class JpaRecentTransferCountQueryAdapterIntegrationTest : PostgresIntegrationTestBase() {
+class JpaRecentTransferCountQueryAdapterIntegrationTest {
 
     @SpringBootApplication(
         scanBasePackages = [

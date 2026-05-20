@@ -1,44 +1,45 @@
 package io.github.hyungkishin.transentia.infra.redis
 
-import io.github.hyungkishin.transentia.infra.support.RedisIntegrationTestBase
+import io.github.hyungkishin.transentia.infra.testcontainers.RedisCleanUp
+import io.github.hyungkishin.transentia.infra.testcontainers.RedisTestContainersConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.context.annotation.ComponentScan
+import org.springframework.context.annotation.Import
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory
 import org.springframework.data.redis.core.StringRedisTemplate
 
 @SpringBootTest(classes = [RedisDailyTransferAmountCacheAdapterIntegrationTest.TestConfig::class])
+@Import(RedisTestContainersConfig::class)
 @DisplayName("RedisDailyTransferAmountCacheAdapter 통합 테스트")
-class RedisDailyTransferAmountCacheAdapterIntegrationTest : RedisIntegrationTestBase() {
+class RedisDailyTransferAmountCacheAdapterIntegrationTest {
 
-    @ComponentScan(
-        basePackageClasses = [RedisDailyTransferAmountCacheAdapter::class]
-    )
-    @org.springframework.boot.autoconfigure.SpringBootApplication
+    @SpringBootApplication(scanBasePackageClasses = [RedisDailyTransferAmountCacheAdapter::class])
     class TestConfig {
         @org.springframework.context.annotation.Bean
-        fun connectionFactory(): LettuceConnectionFactory =
-            LettuceConnectionFactory(redis.host, redis.firstMappedPort)
+        fun connectionFactory(
+            @org.springframework.beans.factory.annotation.Value("\${spring.data.redis.host}") host: String,
+            @org.springframework.beans.factory.annotation.Value("\${spring.data.redis.port}") port: Int,
+        ): LettuceConnectionFactory = LettuceConnectionFactory(host, port)
 
         @org.springframework.context.annotation.Bean
         fun stringRedisTemplate(connectionFactory: LettuceConnectionFactory): StringRedisTemplate =
             StringRedisTemplate(connectionFactory)
+
+        @org.springframework.context.annotation.Bean
+        fun cleanUp(template: StringRedisTemplate) = RedisCleanUp(template)
     }
 
-    @Autowired
-    lateinit var adapter: RedisDailyTransferAmountCacheAdapter
-
-    @Autowired
-    lateinit var template: StringRedisTemplate
+    @Autowired lateinit var adapter: RedisDailyTransferAmountCacheAdapter
+    @Autowired lateinit var template: StringRedisTemplate
+    @Autowired lateinit var cleanUp: RedisCleanUp
 
     @BeforeEach
-    fun flushAll() {
-        template.execute<String> { it.serverCommands().flushAll(); "OK" }
-    }
+    fun reset() = cleanUp.all()
 
     @Test
     fun `최초 조회 시 0 을 반환한다`() {
@@ -68,11 +69,9 @@ class RedisDailyTransferAmountCacheAdapterIntegrationTest : RedisIntegrationTest
     fun `addTodayAmount 호출 시 TTL 이 26 시간 이내로 설정된다`() {
         adapter.addTodayAmount(1001L, 10_000L)
 
-        // KST 기준 daily 키 이름은 어댑터 내부 구현이지만, 키 패턴을 검증한다.
         val keys = template.keys("daily:transfer:1001:*")
         assertThat(keys).hasSize(1)
         val ttlSeconds = template.getExpire(keys.first())
-        // 26h = 93600 sec. 0보다 크고 93600 이하여야 한다.
         assertThat(ttlSeconds).isGreaterThan(0L).isLessThanOrEqualTo(93_600L)
     }
 }
