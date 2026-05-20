@@ -20,16 +20,16 @@ import org.springframework.kafka.core.DefaultKafkaConsumerFactory
 class KafkaListenerConfig(
     @Value("\${kafka-config.bootstrap-servers}") private val bootstrapServers: String,
 ) {
-
     @Bean
     fun consumerFactory(): ConsumerFactory<String, String> {
-        val props = mapOf<String, Any>(
-            ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to bootstrapServers,
-            ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to StringDeserializer::class.java,
-            ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to StringDeserializer::class.java,
-            ConsumerConfig.AUTO_OFFSET_RESET_CONFIG to "latest",
-            ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG to true,
-        )
+        val props =
+            mapOf<String, Any>(
+                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to bootstrapServers,
+                ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to StringDeserializer::class.java,
+                ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to StringDeserializer::class.java,
+                ConsumerConfig.AUTO_OFFSET_RESET_CONFIG to "latest",
+                ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG to true,
+            )
         return DefaultKafkaConsumerFactory(props)
     }
 

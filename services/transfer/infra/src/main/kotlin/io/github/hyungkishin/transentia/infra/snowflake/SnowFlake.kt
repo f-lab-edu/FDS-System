@@ -11,12 +11,12 @@ import java.util.concurrent.atomic.AtomicLong
 class Snowflake(
     private val nodeId: Long,
     private val customEpoch: Long = 1704067200000L,
-    private val maxClockBackwardMs: Long = 5L
+    private val maxClockBackwardMs: Long = 5L,
 ) {
     companion object {
         private const val NODE_ID_BITS = 10
         private const val SEQUENCE_BITS = 12
-        private const val TIME_SHIFT   = NODE_ID_BITS + SEQUENCE_BITS
+        private const val TIME_SHIFT = NODE_ID_BITS + SEQUENCE_BITS
 
         private const val MAX_NODE_ID = (1L shl NODE_ID_BITS) - 1
         private const val MAX_SEQUENCE = (1L shl SEQUENCE_BITS) - 1
@@ -83,7 +83,7 @@ class Snowflake(
     fun parseId(id: Long): Triple<Long, Long, Long> {
         val seq = id and MAX_SEQUENCE
         val nid = (id ushr SEQUENCE_BITS) and ((1L shl NODE_ID_BITS) - 1)
-        val ts  = (id ushr TIME_SHIFT) + customEpoch
+        val ts = (id ushr TIME_SHIFT) + customEpoch
         return Triple(ts, nid, seq)
     }
 

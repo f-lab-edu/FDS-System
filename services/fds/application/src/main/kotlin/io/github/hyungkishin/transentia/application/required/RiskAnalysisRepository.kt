@@ -8,5 +8,9 @@ import io.github.hyungkishin.transentia.container.model.RiskLog
  * 입력 이벤트(거래 정보)와 분석 결과(RiskLog)를 함께 저장한다.
  */
 interface RiskAnalysisRepository {
-    fun save(event: TransferCompleteEvent, riskLog: RiskLog, traceId: String?)
+    fun save(
+        event: TransferCompleteEvent,
+        riskLog: RiskLog,
+        traceId: String?,
+    )
 }

@@ -6,6 +6,6 @@ data class TransferEvent(
     val eventId: Long,
     val aggregateType: String,
     val eventType: String,
-    val payload: String,   // JSON
-    val headers: String    // JSON (traceId 등)
+    val payload: String, // JSON
+    val headers: String, // JSON (traceId 등)
 ) : DomainEvent<TransferEvent>

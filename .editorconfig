@@ -1,0 +1,25 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+
+[*.{kt,kts}]
+ij_kotlin_imports_layout = *
+max_line_length = 140
+ktlint_standard_no-wildcard-imports = disabled    # jakarta.persistence.* 등 광범위 import 허용
+ktlint_standard_function-naming = disabled         # 백틱 테스트 함수 이름 허용
+ktlint_standard_filename = disabled                 # IdTypes.kt 처럼 multi-class 유틸 파일 허용
+ktlint_standard_property-naming = disabled         # p, e 등 짧은 파라미터 이름 허용
+ktlint_standard_class-naming = disabled            # 한국어 backtick 클래스명 허용
+ktlint_standard_package-name = disabled            # adapter.`in`.messaging Kotlin keyword escape 허용
+
+[*.{yml,yaml,json}]
+indent_size = 2
+
+[Makefile]
+indent_style = tab

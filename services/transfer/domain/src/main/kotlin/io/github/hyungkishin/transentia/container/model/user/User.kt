@@ -35,16 +35,16 @@ class User private constructor(
     val createdAt: Instant,
     val updatedAt: Instant,
 ) {
-
     // ============ Predicate ============
 
-    fun isBlacklisted(): Boolean =
-        isTransferLocked || status == UserStatus.SUSPENDED
+    fun isBlacklisted(): Boolean = isTransferLocked || status == UserStatus.SUSPENDED
 
-    fun canReceive(): Boolean =
-        status == UserStatus.ACTIVE && !isTransferLocked
+    fun canReceive(): Boolean = status == UserStatus.ACTIVE && !isTransferLocked
 
-    fun canSend(amount: Amount, dailyAccumulated: Long = 0L): Boolean {
+    fun canSend(
+        amount: Amount,
+        dailyAccumulated: Long = 0L,
+    ): Boolean {
         if (isBlacklisted()) return false
         if (accountBalance.balance.currency != amount.currency) return false
         if (!accountBalance.hasEnoughBalance(amount)) return false
@@ -58,7 +58,10 @@ class User private constructor(
      * 송신자 자가 검증. 위반 시 DomainException 으로 fail-fast.
      * 어떤 룰을 어겼는지 메시지에 정확히 담는다.
      */
-    fun assertCanSend(amount: Amount, dailyAccumulated: Long = 0L) {
+    fun assertCanSend(
+        amount: Amount,
+        dailyAccumulated: Long = 0L,
+    ) {
         if (isBlacklisted()) {
             throw DomainException(
                 CommonError.InvalidArgument("sender_blocked"),
@@ -75,7 +78,7 @@ class User private constructor(
         if ((dailyAccumulated + amount.money.rawValue) > limitRaw) {
             throw DomainException(
                 CommonError.InvalidArgument("daily_limit_exceeded"),
-                "일일 송금 한도(${dailyTransferLimit})를 초과했습니다",
+                "일일 송금 한도($dailyTransferLimit)를 초과했습니다",
             )
         }
         if (!accountBalance.hasEnoughBalance(amount)) {
@@ -103,20 +106,23 @@ class User private constructor(
 
     // ============ Read-only utility ============
 
-    fun blockReason(): String = when {
-        status == UserStatus.SUSPENDED -> "계정이 정지되었습니다"
-        status == UserStatus.DEACTIVATED -> "탈퇴한 계정입니다"
-        isTransferLocked -> transferLockReason?.value ?: "송금이 제한되었습니다"
-        else -> ""
-    }
+    fun blockReason(): String =
+        when {
+            status == UserStatus.SUSPENDED -> "계정이 정지되었습니다"
+            status == UserStatus.DEACTIVATED -> "탈퇴한 계정입니다"
+            isTransferLocked -> transferLockReason?.value ?: "송금이 제한되었습니다"
+            else -> ""
+        }
 
     @Deprecated("Use blockReason()", ReplaceWith("blockReason()"))
     fun getBlockReason(): String = blockReason()
 
     /** 하위 호환 — 신규 코드는 canSend(amount, dailyAccumulated) 권장. */
     @Deprecated("Use canSend(amount, dailyAccumulated)", ReplaceWith("canSend(amount, dailyAccumulated)"))
-    fun validateTransferAmount(amount: Amount, dailyAccumulated: Long = 0L): Boolean =
-        canSend(amount, dailyAccumulated)
+    fun validateTransferAmount(
+        amount: Amount,
+        dailyAccumulated: Long = 0L,
+    ): Boolean = canSend(amount, dailyAccumulated)
 
     companion object {
         fun of(
@@ -131,10 +137,19 @@ class User private constructor(
             dailyTransferLimit: DailyTransferLimit,
             createdAt: Instant,
             updatedAt: Instant,
-        ): User = User(
-            id, name, email, status, role, accountBalance,
-            isTransferLocked, transferLockReason, dailyTransferLimit,
-            createdAt, updatedAt,
-        )
+        ): User =
+            User(
+                id,
+                name,
+                email,
+                status,
+                role,
+                accountBalance,
+                isTransferLocked,
+                transferLockReason,
+                dailyTransferLimit,
+                createdAt,
+                updatedAt,
+            )
     }
 }

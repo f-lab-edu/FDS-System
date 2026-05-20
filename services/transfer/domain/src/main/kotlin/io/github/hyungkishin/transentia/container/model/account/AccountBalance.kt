@@ -11,16 +11,13 @@ class AccountBalance private constructor(
     val accountNumber: String,
     var balance: Amount,
 ) {
-
     companion object {
         fun of(
             id: SnowFlakeId,
             userId: SnowFlakeId,
             accountNumber: String,
             balance: Amount,
-        ): AccountBalance {
-            return AccountBalance(id, userId, accountNumber, balance)
-        }
+        ): AccountBalance = AccountBalance(id, userId, accountNumber, balance)
     }
 
     fun deposit(amount: Amount) {
@@ -34,7 +31,7 @@ class AccountBalance private constructor(
         if (balance < amount) {
             throw DomainException(
                 CommonError.InvalidArgument(field = "amount", reason = "insufficient_balance"),
-                detail = "잔액이 부족합니다. 현재잔액=$balance, 요청금액=$amount"
+                detail = "잔액이 부족합니다. 현재잔액=$balance, 요청금액=$amount",
             )
         }
         balance = balance.subtract(amount)
@@ -51,7 +48,7 @@ class AccountBalance private constructor(
         if (balance.currency != other.currency) {
             throw DomainException(
                 CommonError.InvalidArgument("currency_mismatch"),
-                "계좌 통화(${balance.currency})와 요청 금액 통화(${other.currency})가 다릅니다"
+                "계좌 통화(${balance.currency})와 요청 금액 통화(${other.currency})가 다릅니다",
             )
         }
     }

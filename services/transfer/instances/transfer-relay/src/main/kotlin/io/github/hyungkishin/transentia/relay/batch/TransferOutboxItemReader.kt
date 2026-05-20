@@ -3,22 +3,21 @@ package io.github.hyungkishin.transentia.relay.batch
 import io.github.hyungkishin.transentia.application.required.TransferEventsOutboxRepository
 import io.github.hyungkishin.transentia.common.outbox.transfer.ClaimedRow
 import io.github.hyungkishin.transentia.relay.config.OutboxRelayConfig
-import org.slf4j.LoggerFactory
-import org.springframework.batch.core.configuration.annotation.StepScope
-import org.springframework.batch.item.ItemReader
-import org.springframework.stereotype.Component
 import java.time.Instant
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
+import org.slf4j.LoggerFactory
+import org.springframework.batch.core.configuration.annotation.StepScope
+import org.springframework.batch.item.ItemReader
+import org.springframework.stereotype.Component
 
 @Component
 @StepScope
 class TransferOutboxItemReader(
     private val repository: TransferEventsOutboxRepository,
-    private val config: OutboxRelayConfig
+    private val config: OutboxRelayConfig,
 ) : ItemReader<ClaimedRow> {
-
     private val log = LoggerFactory.getLogger(javaClass)
 
     // Thread-Safe Queue
@@ -62,11 +61,12 @@ class TransferOutboxItemReader(
 
     private fun loadNextBatch() {
         try {
-            val batch = repository.claimBatch(
-                limit = config.chunkSize,
-                now = Instant.now(),
-                sendingTimeoutSeconds = config.sendingTimeoutSeconds
-            )
+            val batch =
+                repository.claimBatch(
+                    limit = config.chunkSize,
+                    now = Instant.now(),
+                    sendingTimeoutSeconds = config.sendingTimeoutSeconds,
+                )
 
             if (batch.isEmpty()) {
                 exhausted = true
@@ -75,7 +75,6 @@ class TransferOutboxItemReader(
                 queue.addAll(batch)
                 log.debug("새 배치 로드: {} 건", batch.size)
             }
-
         } catch (e: Exception) {
             log.error("배치 로드 실패", e)
             exhausted = true

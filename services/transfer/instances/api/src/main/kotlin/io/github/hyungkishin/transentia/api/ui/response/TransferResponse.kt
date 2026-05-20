@@ -4,18 +4,18 @@ import io.github.hyungkishin.transentia.application.required.command.TransferRes
 import java.time.Instant
 
 data class TransferResponse(
-    val transactionId: Long, val status: String, val createdAt: Instant, val receivedAt: Instant?
+    val transactionId: Long,
+    val status: String,
+    val createdAt: Instant,
+    val receivedAt: Instant?,
 ) {
     companion object {
-        fun of(
-            command: TransferResponseCommand,
-        ): TransferResponse {
-            return TransferResponse(
+        fun of(command: TransferResponseCommand): TransferResponse =
+            TransferResponse(
                 transactionId = command.transactionId,
                 status = command.status,
                 createdAt = command.createdAt,
-                receivedAt = command.receivedAt
+                receivedAt = command.receivedAt,
             )
-        }
     }
 }

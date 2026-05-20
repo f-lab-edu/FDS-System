@@ -69,6 +69,10 @@ class RootConventionsPlugin : Plugin<Project> {
 
             if (name in jpaModules) pluginManager.apply("transentia.spring-jpa")
             if (name in coverageModules) pluginManager.apply("transentia.code-coverage")
+
+            val isKotlinModule = name in bootApps || name in springModules ||
+                name in pureKotlinModules || name in kafkaModules || name in kafkaConfigModules
+            if (isKotlinModule) pluginManager.apply("transentia.code-quality")
         }
     }
 }

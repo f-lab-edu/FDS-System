@@ -9,5 +9,8 @@ interface DailyTransferAmountCachePort {
     fun getTodayAmount(userId: Long): Long
 
     /** 오늘 누적치에 amount(rawValue)를 더한 뒤 갱신된 누적치 반환. 최초 호출 시 TTL 도 설정. */
-    fun addTodayAmount(userId: Long, amount: Long): Long
+    fun addTodayAmount(
+        userId: Long,
+        amount: Long,
+    ): Long
 }

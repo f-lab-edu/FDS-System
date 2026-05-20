@@ -26,38 +26,45 @@ class SlackNotificationAdapter(
     @Value("\${fds.alert.slack.webhook-url}") private val webhookUrl: String,
     meterRegistry: MeterRegistry,
 ) : AlertNotificationPort {
-
     private val log = LoggerFactory.getLogger(javaClass)
     private val client: RestClient = RestClient.builder().build()
 
-    private val sentCounter: Counter = Counter.builder("fds.alert.slack.sent")
-        .description("Slack 알림 전송 성공 누적")
-        .register(meterRegistry)
-    private val failedCounter: Counter = Counter.builder("fds.alert.slack.failed")
-        .description("Slack 알림 전송 실패 누적")
-        .register(meterRegistry)
+    private val sentCounter: Counter =
+        Counter
+            .builder("fds.alert.slack.sent")
+            .description("Slack 알림 전송 성공 누적")
+            .register(meterRegistry)
+    private val failedCounter: Counter =
+        Counter
+            .builder("fds.alert.slack.failed")
+            .description("Slack 알림 전송 실패 누적")
+            .register(meterRegistry)
 
     @CircuitBreaker(name = "slack", fallbackMethod = "notifyFallback")
     override fun notify(notification: AlertNotification) {
         val color = colorFor(notification.severity)
-        val body = mapOf(
-            "attachments" to listOf(
-                mapOf(
-                    "color" to color,
-                    "title" to "[FDS-${notification.severity}] 의심 패턴 탐지",
-                    "text" to notification.reason,
-                    "fields" to listOf(
-                        field("Account ID", notification.accountId.toString(), true),
-                        field("Window", "${notification.windowMinutes}분", true),
-                        field("Transfer Count", notification.transferCount.toString(), true),
-                        field("Total Amount", "%,d원".format(notification.totalAmount), true),
-                        field("Trace ID", notification.traceId ?: "-", false),
+        val body =
+            mapOf(
+                "attachments" to
+                    listOf(
+                        mapOf(
+                            "color" to color,
+                            "title" to "[FDS-${notification.severity}] 의심 패턴 탐지",
+                            "text" to notification.reason,
+                            "fields" to
+                                listOf(
+                                    field("Account ID", notification.accountId.toString(), true),
+                                    field("Window", "${notification.windowMinutes}분", true),
+                                    field("Transfer Count", notification.transferCount.toString(), true),
+                                    field("Total Amount", "%,d원".format(notification.totalAmount), true),
+                                    field("Trace ID", notification.traceId ?: "-", false),
+                                ),
+                        ),
                     ),
-                )
             )
-        )
 
-        client.post()
+        client
+            .post()
             .uri(webhookUrl)
             .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
             .body(body)
@@ -67,25 +74,35 @@ class SlackNotificationAdapter(
         sentCounter.increment()
         log.info(
             "[slack-alert] accountId={} severity={} reason={}",
-            notification.accountId, notification.severity, notification.reason
+            notification.accountId,
+            notification.severity,
+            notification.reason,
         )
     }
 
     @Suppress("unused")
-    fun notifyFallback(notification: AlertNotification, ex: Throwable) {
+    fun notifyFallback(
+        notification: AlertNotification,
+        ex: Throwable,
+    ) {
         failedCounter.increment()
         log.warn(
             "[slack-alert] fallback (CB open or send error). accountId={} cause={}",
-            notification.accountId, ex.message
+            notification.accountId,
+            ex.message,
         )
     }
 
-    private fun field(title: String, value: String, short: Boolean) =
-        mapOf("title" to title, "value" to value, "short" to short)
+    private fun field(
+        title: String,
+        value: String,
+        short: Boolean,
+    ) = mapOf("title" to title, "value" to value, "short" to short)
 
-    private fun colorFor(severity: AlertNotification.Severity): String = when (severity) {
-        AlertNotification.Severity.CRITICAL -> "#cc0000"
-        AlertNotification.Severity.WARNING -> "#e8a317"
-        AlertNotification.Severity.INFO -> "#36a64f"
-    }
+    private fun colorFor(severity: AlertNotification.Severity): String =
+        when (severity) {
+            AlertNotification.Severity.CRITICAL -> "#cc0000"
+            AlertNotification.Severity.WARNING -> "#e8a317"
+            AlertNotification.Severity.INFO -> "#36a64f"
+        }
 }

@@ -6,5 +6,5 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 data class SnowflakeProps(
     var nodeId: Long = 0,
     var customEpoch: Long = 1704067200000L,
-    var maxClockBackwardMs: Long = 5
+    var maxClockBackwardMs: Long = 5,
 )

@@ -12,6 +12,9 @@ class RedisCleanUp(
     private val redisTemplate: StringRedisTemplate,
 ) {
     fun all() {
-        redisTemplate.execute<String> { it.serverCommands().flushAll(); "OK" }
+        redisTemplate.execute<String> {
+            it.serverCommands().flushAll()
+            "OK"
+        }
     }
 }

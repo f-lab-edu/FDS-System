@@ -1,6 +1,8 @@
 package io.github.hyungkishin.transentia.infra.rdb.adapter
 
 import io.github.hyungkishin.transentia.infra.testcontainers.PostgresTestContainersConfig
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -10,23 +12,20 @@ import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
 import org.springframework.jdbc.core.JdbcTemplate
-import java.time.Instant
-import java.time.temporal.ChronoUnit
 
 @SpringBootTest(
     classes = [JpaRecentTransferCountQueryAdapterIntegrationTest.TestApp::class],
-    properties = ["spring.main.allow-bean-definition-overriding=true"]
+    properties = ["spring.main.allow-bean-definition-overriding=true"],
 )
 @Import(PostgresTestContainersConfig::class)
 @DisplayName("JpaRecentTransferCountQueryAdapter 통합 테스트")
 class JpaRecentTransferCountQueryAdapterIntegrationTest {
-
     @SpringBootApplication(
         scanBasePackages = [
             "io.github.hyungkishin.transentia.infra.rdb.adapter",
             "io.github.hyungkishin.transentia.infra.rdb.repository",
             "io.github.hyungkishin.transentia.infra.rdb.entity",
-        ]
+        ],
     )
     class TestApp
 
@@ -41,14 +40,22 @@ class JpaRecentTransferCountQueryAdapterIntegrationTest {
         jdbc.update("TRUNCATE TABLE transactions")
     }
 
-    private fun insertTx(id: Long, senderId: Long, createdAt: Instant) {
+    private fun insertTx(
+        id: Long,
+        senderId: Long,
+        createdAt: Instant,
+    ) {
         jdbc.update(
             """
             INSERT INTO transactions
                 (id, sender_user_id, receiver_user_id, amount, currency, status, created_at)
             VALUES (?, ?, ?, ?, 'KRW', 'COMPLETED', ?)
             """.trimIndent(),
-            id, senderId, senderId + 1, 10_000L, java.sql.Timestamp.from(createdAt)
+            id,
+            senderId,
+            senderId + 1,
+            10_000L,
+            java.sql.Timestamp.from(createdAt),
         )
     }
 
@@ -58,7 +65,7 @@ class JpaRecentTransferCountQueryAdapterIntegrationTest {
         insertTx(1, 1001L, now.minus(2, ChronoUnit.MINUTES))
         insertTx(2, 1001L, now.minus(8, ChronoUnit.MINUTES))
         insertTx(3, 1001L, now.minus(20, ChronoUnit.MINUTES)) // 윈도우 밖
-        insertTx(4, 1002L, now.minus(1, ChronoUnit.MINUTES))  // 다른 사용자
+        insertTx(4, 1002L, now.minus(1, ChronoUnit.MINUTES)) // 다른 사용자
 
         val count = adapter.countByUserSince(1001L, now.minus(10, ChronoUnit.MINUTES))
 

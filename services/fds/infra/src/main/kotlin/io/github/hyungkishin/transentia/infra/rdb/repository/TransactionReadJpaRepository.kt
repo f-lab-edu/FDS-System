@@ -1,10 +1,10 @@
 package io.github.hyungkishin.transentia.infra.rdb.repository
 
 import io.github.hyungkishin.transentia.infra.rdb.entity.TransactionReadEntity
+import java.time.Instant
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
-import java.time.Instant
 
 interface TransactionReadJpaRepository : JpaRepository<TransactionReadEntity, Long> {
     @Query(
@@ -13,7 +13,10 @@ interface TransactionReadJpaRepository : JpaRepository<TransactionReadEntity, Lo
         FROM FdsTransactionRead t
         WHERE t.senderUserId = :userId
           AND t.createdAt >= :since
-        """
+        """,
     )
-    fun countByUserSince(@Param("userId") userId: Long, @Param("since") since: Instant): Long
+    fun countByUserSince(
+        @Param("userId") userId: Long,
+        @Param("since") since: Instant,
+    ): Long
 }

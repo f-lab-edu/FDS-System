@@ -1,0 +1,8 @@
+{
+  "context": {
+    "autoIncludeFiles": false
+  },
+  "permissions": {
+    "allow": ["**"]
+  }
+}

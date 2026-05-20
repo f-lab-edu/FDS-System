@@ -3,13 +3,13 @@ package io.github.hyungkishin.transentia.relay.dlq
 import io.github.hyungkishin.transentia.application.required.TransferEventsOutboxRepository
 import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.MeterRegistry
+import java.time.Duration
+import java.time.Instant
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
-import java.time.Duration
-import java.time.Instant
 
 /**
  * Outbox archive Worker.
@@ -35,9 +35,11 @@ class OutboxArchiveScheduler(
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    private val archivedCounter: Counter = Counter.builder("outbox.archived")
-        .description("transfer_events PUBLISHED row 가 archive 테이블로 이동한 누적 수")
-        .register(meterRegistry)
+    private val archivedCounter: Counter =
+        Counter
+            .builder("outbox.archived")
+            .description("transfer_events PUBLISHED row 가 archive 테이블로 이동한 누적 수")
+            .register(meterRegistry)
 
     @Scheduled(fixedDelayString = "\${archive.outbox.interval-ms:86400000}")
     @Transactional
@@ -56,7 +58,8 @@ class OutboxArchiveScheduler(
             if (total > 0) {
                 log.info(
                     "[outbox-archive] {} 건 이동 (older than {} days)",
-                    total, retentionDays
+                    total,
+                    retentionDays,
                 )
             }
         } catch (e: Exception) {

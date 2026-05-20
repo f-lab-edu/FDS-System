@@ -2,9 +2,9 @@ package io.github.hyungkishin.transentia.api.observability
 
 import io.micrometer.core.instrument.MeterRegistry
 import jakarta.annotation.PostConstruct
+import java.util.concurrent.atomic.AtomicLong
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Component
-import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Outbox 의 운영 상태를 Prometheus 로 노출하는 게이지.
@@ -23,7 +23,6 @@ class OutboxMetrics(
     private val jdbcTemplate: JdbcTemplate,
     private val meterRegistry: MeterRegistry,
 ) {
-
     private val pendingCount = AtomicLong(0)
     private val oldestPendingSeconds = AtomicLong(0)
 
@@ -39,19 +38,21 @@ class OutboxMetrics(
         }
     }
 
-    private fun safeCountPending(): Long = try {
-        jdbcTemplate.queryForObject(
-            "SELECT COUNT(*) FROM transfer_events WHERE status = 'PENDING'",
-            Long::class.java
-        ) ?: 0L
-    } catch (e: Exception) {
-        // 게이지 실패가 알림 폭증으로 이어지지 않도록 0 반환.
-        0L
-    }
+    private fun safeCountPending(): Long =
+        try {
+            jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM transfer_events WHERE status = 'PENDING'",
+                Long::class.java,
+            ) ?: 0L
+        } catch (e: Exception) {
+            // 게이지 실패가 알림 폭증으로 이어지지 않도록 0 반환.
+            0L
+        }
 
-    private fun safeOldestPendingSeconds(): Long = try {
-        jdbcTemplate.queryForObject(
-            """
+    private fun safeOldestPendingSeconds(): Long =
+        try {
+            jdbcTemplate.queryForObject(
+                """
             SELECT COALESCE(
                 EXTRACT(EPOCH FROM (NOW() - MIN(created_at)))::BIGINT,
                 0
@@ -59,9 +60,9 @@ class OutboxMetrics(
             FROM transfer_events
             WHERE status = 'PENDING'
             """,
-            Long::class.java
-        ) ?: 0L
-    } catch (e: Exception) {
-        0L
-    }
+                Long::class.java,
+            ) ?: 0L
+        } catch (e: Exception) {
+            0L
+        }
 }

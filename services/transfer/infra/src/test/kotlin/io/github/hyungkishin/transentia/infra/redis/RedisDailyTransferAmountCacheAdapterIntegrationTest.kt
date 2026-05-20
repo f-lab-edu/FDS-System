@@ -17,7 +17,6 @@ import org.springframework.data.redis.core.StringRedisTemplate
 @Import(RedisTestContainersConfig::class)
 @DisplayName("RedisDailyTransferAmountCacheAdapter 통합 테스트")
 class RedisDailyTransferAmountCacheAdapterIntegrationTest {
-
     @SpringBootApplication(scanBasePackageClasses = [RedisDailyTransferAmountCacheAdapter::class])
     class TestConfig {
         @org.springframework.context.annotation.Bean
@@ -27,15 +26,16 @@ class RedisDailyTransferAmountCacheAdapterIntegrationTest {
         ): LettuceConnectionFactory = LettuceConnectionFactory(host, port)
 
         @org.springframework.context.annotation.Bean
-        fun stringRedisTemplate(connectionFactory: LettuceConnectionFactory): StringRedisTemplate =
-            StringRedisTemplate(connectionFactory)
+        fun stringRedisTemplate(connectionFactory: LettuceConnectionFactory): StringRedisTemplate = StringRedisTemplate(connectionFactory)
 
         @org.springframework.context.annotation.Bean
         fun cleanUp(template: StringRedisTemplate) = RedisCleanUp(template)
     }
 
     @Autowired lateinit var adapter: RedisDailyTransferAmountCacheAdapter
+
     @Autowired lateinit var template: StringRedisTemplate
+
     @Autowired lateinit var cleanUp: RedisCleanUp
 
     @BeforeEach

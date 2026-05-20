@@ -9,11 +9,10 @@ import org.springframework.web.filter.OncePerRequestFilter
 
 @Component
 class TraceResponseHeaderFilter : OncePerRequestFilter() {
-
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
-        filterChain: FilterChain
+        filterChain: FilterChain,
     ) {
         filterChain.doFilter(request, response)
 
@@ -23,5 +22,4 @@ class TraceResponseHeaderFilter : OncePerRequestFilter() {
             response.setHeader("X-Trace-Id", traceId)
         }
     }
-
 }

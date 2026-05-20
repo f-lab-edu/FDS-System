@@ -9,12 +9,12 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories
 @EnableJpaAuditing
 @EntityScan(
     basePackages = [
-        "io.github.hyungkishin.transentia.infra.rdb.entity"
-    ]
+        "io.github.hyungkishin.transentia.infra.rdb.entity",
+    ],
 )
 @EnableJpaRepositories(
     basePackages = [
-        "io.github.hyungkishin.transentia.infra.rdb.repository"
-    ]
+        "io.github.hyungkishin.transentia.infra.rdb.repository",
+    ],
 )
 class FdsInfraJpaConfig

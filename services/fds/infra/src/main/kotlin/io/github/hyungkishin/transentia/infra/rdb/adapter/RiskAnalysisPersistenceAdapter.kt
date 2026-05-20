@@ -15,35 +15,41 @@ class RiskAnalysisPersistenceAdapter(
     private val repository: FraudDetectionJpaRepository,
     private val idGenerator: IdGenerator,
 ) : RiskAnalysisRepository {
-
-    override fun save(event: TransferCompleteEvent, riskLog: RiskLog, traceId: String?) {
-        val entity = FraudDetectionJpaEntity(
-            id = idGenerator.nextId(),
-            eventId = event.eventId,
-            fromAccountId = event.senderId,
-            toAccountId = event.receiverId,
-            amount = event.amount,
-            currency = "KRW",
-            totalRiskScore = riskLog.ruleHits.sumOf { it.weight },
-            actionType = mapDecision(riskLog.decision),
-            ruleResults = riskLog.ruleHits.map { hit ->
-                mapOf(
-                    "ruleCode" to hit.ruleCode,
-                    "severity" to hit.severity.name,
-                    "weight" to hit.weight,
-                    "reason" to (hit.reason ?: ""),
-                    "occurredAt" to hit.occurredAt.toString(),
-                )
-            },
-            detectedAt = riskLog.evaluatedAt,
-            traceId = traceId,
-        )
+    override fun save(
+        event: TransferCompleteEvent,
+        riskLog: RiskLog,
+        traceId: String?,
+    ) {
+        val entity =
+            FraudDetectionJpaEntity(
+                id = idGenerator.nextId(),
+                eventId = event.eventId,
+                fromAccountId = event.senderId,
+                toAccountId = event.receiverId,
+                amount = event.amount,
+                currency = "KRW",
+                totalRiskScore = riskLog.ruleHits.sumOf { it.weight },
+                actionType = mapDecision(riskLog.decision),
+                ruleResults =
+                    riskLog.ruleHits.map { hit ->
+                        mapOf(
+                            "ruleCode" to hit.ruleCode,
+                            "severity" to hit.severity.name,
+                            "weight" to hit.weight,
+                            "reason" to (hit.reason ?: ""),
+                            "occurredAt" to hit.occurredAt.toString(),
+                        )
+                    },
+                detectedAt = riskLog.evaluatedAt,
+                traceId = traceId,
+            )
         repository.save(entity)
     }
 
-    private fun mapDecision(decision: FinalDecisionType): ActionType = when (decision) {
-        FinalDecisionType.ALLOWED -> ActionType.ALLOW
-        FinalDecisionType.REVIEW -> ActionType.REVIEW
-        FinalDecisionType.BLOCKED -> ActionType.BLOCK
-    }
+    private fun mapDecision(decision: FinalDecisionType): ActionType =
+        when (decision) {
+            FinalDecisionType.ALLOWED -> ActionType.ALLOW
+            FinalDecisionType.REVIEW -> ActionType.REVIEW
+            FinalDecisionType.BLOCKED -> ActionType.BLOCK
+        }
 }

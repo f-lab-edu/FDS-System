@@ -11,31 +11,24 @@ import org.hibernate.Hibernate
 @Entity
 @Table(name = "account_balances")
 class AccountBalanceJpaEntity(
-
     @Id
     val id: Long,
-
     @Column(name = "account_number", nullable = false)
     val accountNumber: String,
-
     @Column(name = "user_id", nullable = false)
     val userId: Long,
-
     /**
      * DB에는 소수점 없는 정수(Long) 값 저장 (scale 반영된 raw value)
      */
     @Column(name = "balance", nullable = false)
     var balance: Long,
-
     /**
      * 통화 코드 (KRW, USD, ...)
      */
     @Enumerated(EnumType.STRING)
     @Column(name = "currency", nullable = false)
     val currency: Currency = Currency.KRW,
-
-    ) : BaseEntity() {
-
+) : BaseEntity() {
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", insertable = false, updatable = false)
     var user: UserJpaEntity? = null

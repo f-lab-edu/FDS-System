@@ -8,17 +8,24 @@ package io.github.hyungkishin.transentia.common.model
  * - 순수한 수학적 금액만 표현, 통화 정보 없음
  */
 @JvmInline
-value class Money private constructor(val rawValue: Long) : Comparable<Money> {
+value class Money private constructor(
+    val rawValue: Long,
+) : Comparable<Money> {
     companion object {
         fun fromRawValue(raw: Long): Money {
             require(raw >= 0) { "금액은 음수일 수 없습니다." }
             return Money(raw)
         }
 
-        fun fromMajor(major: Long, scale: Int): Money =
-            fromRawValue(major * pow10(scale))
+        fun fromMajor(
+            major: Long,
+            scale: Int,
+        ): Money = fromRawValue(major * pow10(scale))
 
-        fun parseMajorString(input: String, scale: Int): Money {
+        fun parseMajorString(
+            input: String,
+            scale: Int,
+        ): Money {
             if (scale == 0) {
                 require(Regex("""^\d+$""").matches(input)) { "정수만 허용: $input" }
                 return fromRawValue(input.toLong())
@@ -28,12 +35,14 @@ value class Money private constructor(val rawValue: Long) : Comparable<Money> {
             require(re.matches(input)) { "소수점 ${scale}자리 이하만 허용: $input" }
             val parts = input.split(".")
             val whole = parts[0].toLong()
-            val fraction = if (parts.size > 1)
-                parts[1].padEnd(scale, '0').take(scale).toLong()
-            else 0L
+            val fraction =
+                if (parts.size > 1) {
+                    parts[1].padEnd(scale, '0').take(scale).toLong()
+                } else {
+                    0L
+                }
             return fromRawValue(whole * pow10(scale) + fraction)
         }
-
     }
 
     fun add(other: Money): Money {
@@ -57,11 +66,16 @@ value class Money private constructor(val rawValue: Long) : Comparable<Money> {
         val factor = pow10(scale)
         val whole = rawValue / factor
         val fraction = rawValue % factor
-        return if (fraction == 0L) whole.toString()
-        else "%d.%0${scale}d".format(whole, fraction).trimEnd('0').trimEnd('.')
+        return if (fraction == 0L) {
+            whole.toString()
+        } else {
+            "%d.%0${scale}d".format(whole, fraction).trimEnd('0').trimEnd('.')
+        }
     }
 }
 
 private fun pow10(n: Int): Long {
-    var r = 1L; repeat(n) { r *= 10 }; return r
+    var r = 1L
+    repeat(n) { r *= 10 }
+    return r
 }

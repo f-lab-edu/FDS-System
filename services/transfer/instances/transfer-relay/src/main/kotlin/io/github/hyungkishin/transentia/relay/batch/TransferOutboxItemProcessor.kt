@@ -12,35 +12,37 @@ import org.springframework.stereotype.Component
 
 @Component
 class TransferOutboxItemProcessor(
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
 ) : ItemProcessor<ClaimedRow, Pair<ClaimedRow, TransferEventAvroModel>> {
-
     override fun process(item: ClaimedRow): Pair<ClaimedRow, TransferEventAvroModel> {
         try {
             val payload = objectMapper.readValue(item.payload, TransferPayload::class.java)
 
-            val avroModel = TransferEventAvroModel.newBuilder()
-                .setEventId(item.eventId)
-                .setEventType(
-                    if (payload.status == "COMPLETED") TransferEventType.TRANSFER_COMPLETED
-                    else TransferEventType.TRANSFER_FAILED
-                )
-                .setTransactionId(payload.transactionId)
-                .setSenderId(payload.senderId)
-                .setReceiverId(payload.receiverUserId)
-                .setAmount(payload.amount.toString())
-                .setStatus(TransferStatus.valueOf(payload.status))
-                .setOccurredAt(payload.occurredAt)
-                .setHeaders(item.headers)
-                .setCreatedAt(System.currentTimeMillis())
-                .build()
-            
+            val avroModel =
+                TransferEventAvroModel
+                    .newBuilder()
+                    .setEventId(item.eventId)
+                    .setEventType(
+                        if (payload.status == "COMPLETED") {
+                            TransferEventType.TRANSFER_COMPLETED
+                        } else {
+                            TransferEventType.TRANSFER_FAILED
+                        },
+                    ).setTransactionId(payload.transactionId)
+                    .setSenderId(payload.senderId)
+                    .setReceiverId(payload.receiverUserId)
+                    .setAmount(payload.amount.toString())
+                    .setStatus(TransferStatus.valueOf(payload.status))
+                    .setOccurredAt(payload.occurredAt)
+                    .setHeaders(item.headers)
+                    .setCreatedAt(System.currentTimeMillis())
+                    .build()
+
             return item to avroModel
-            
         } catch (e: Exception) {
             throw InvalidEventDataException(
-                "이벤트 변환 실패: eventId=${item.eventId}", 
-                e
+                "이벤트 변환 실패: eventId=${item.eventId}",
+                e,
             )
         }
     }

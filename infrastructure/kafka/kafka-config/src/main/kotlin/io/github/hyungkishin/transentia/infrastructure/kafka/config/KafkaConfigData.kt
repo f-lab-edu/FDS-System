@@ -8,7 +8,6 @@ import org.springframework.context.annotation.Configuration
 @Configuration
 @ConfigurationProperties(prefix = "kafka-config")
 class KafkaConfigData {
-
     @NotBlank
     lateinit var bootstrapServers: String
 
@@ -24,5 +23,4 @@ class KafkaConfigData {
 
     @NotNull
     var replicationFactor: Short = 3
-
 }

@@ -6,6 +6,5 @@ enum class ReasonCode {
     RULE_CRITICAL_HIT,
     RULE_HIGH_HIT,
     TOO_MANY_HITS,
-    MANUAL_REVIEW_REQUIRED
-    ;
+    MANUAL_REVIEW_REQUIRED,
 }

@@ -1,11 +1,11 @@
 package io.github.hyungkishin.transentia.infra.snowflake
 
-import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Value
-import org.springframework.stereotype.Component
 import java.net.InetAddress
 import kotlin.math.absoluteValue
 import kotlin.random.Random
+import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.stereotype.Component
 
 /**
  * Snowflake node_id 자동 할당.
@@ -53,17 +53,18 @@ class SnowflakeNodeIdResolver(
         return "hostname-hash" to (host.hashCode().toLong().absoluteValue % MAX_NODE_ID)
     }
 
-    private fun hostnameSafe(): String = try {
-        InetAddress.getLocalHost().hostName ?: fallbackHost()
-    } catch (e: Exception) {
-        fallbackHost()
-    }
+    private fun hostnameSafe(): String =
+        try {
+            InetAddress.getLocalHost().hostName ?: fallbackHost()
+        } catch (e: Exception) {
+            fallbackHost()
+        }
 
-    private fun fallbackHost(): String =
-        System.getenv("HOSTNAME") ?: "node-${Random.nextInt(0, 1024)}"
+    private fun fallbackHost(): String = System.getenv("HOSTNAME") ?: "node-${Random.nextInt(0, 1024)}"
 
     companion object {
         private const val MAX_NODE_ID = 1024L
+
         // 'pod-3', 'transfer-api-2', 'fds-instance-7' 등의 끝 숫자
         private val ORDINAL_REGEX = Regex("-(\\d+)(?:[^\\d].*)?$")
     }

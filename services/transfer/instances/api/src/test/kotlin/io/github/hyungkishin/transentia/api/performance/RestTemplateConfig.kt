@@ -13,7 +13,6 @@ import org.springframework.web.client.RestTemplate
 
 @TestConfiguration
 class RestTemplateConfig {
-
     /**
      * 기본 RestTemplate
      * - SimpleClientHttpRequestFactory 사용
@@ -21,9 +20,7 @@ class RestTemplateConfig {
      * - Connection Pool 없음
      */
     @Bean("basicRestTemplate")
-    fun basicRestTemplate(): RestTemplate {
-        return RestTemplate()
-    }
+    fun basicRestTemplate(): RestTemplate = RestTemplate()
 
     /**
      * Connection Pool이 설정된 RestTemplate
@@ -33,41 +30,46 @@ class RestTemplateConfig {
     @Bean("pooledRestTemplate")
     fun pooledRestTemplate(): RestTemplate {
         // ConnectionConfig: 연결 레벨 설정
-        val connectionConfig = ConnectionConfig.custom()
-            .setConnectTimeout(Timeout.ofSeconds(3)) // TCP 연결
-            .setSocketTimeout(Timeout.ofSeconds(30))              // Socket read
-            .setTimeToLive(TimeValue.ofMinutes(5))                // 최대 5분 후 재생성
-            .setValidateAfterInactivity(TimeValue.ofSeconds(10))  // 10초 유휴 후 검증
-            .build()
+        val connectionConfig =
+            ConnectionConfig
+                .custom()
+                .setConnectTimeout(Timeout.ofSeconds(3)) // TCP 연결
+                .setSocketTimeout(Timeout.ofSeconds(30)) // Socket read
+                .setTimeToLive(TimeValue.ofMinutes(5)) // 최대 5분 후 재생성
+                .setValidateAfterInactivity(TimeValue.ofSeconds(10)) // 10초 유휴 후 검증
+                .build()
 
         // Connection Pool Manager
-        val connectionManager = PoolingHttpClientConnectionManagerBuilder.create()
-            .setMaxConnTotal(200)
-            .setMaxConnPerRoute(100)
-            .setDefaultConnectionConfig(connectionConfig)
-            .build()
+        val connectionManager =
+            PoolingHttpClientConnectionManagerBuilder
+                .create()
+                .setMaxConnTotal(200)
+                .setMaxConnPerRoute(100)
+                .setDefaultConnectionConfig(connectionConfig)
+                .build()
 
         // RequestConfig - 요청 레벨 설정
-        val requestConfig = RequestConfig.custom()
-            .setConnectionRequestTimeout(Timeout.ofSeconds(10)) // Pool 대기
-            .setResponseTimeout(Timeout.ofSeconds(30)) // 응답 대기
-            .build()
+        val requestConfig =
+            RequestConfig
+                .custom()
+                .setConnectionRequestTimeout(Timeout.ofSeconds(10)) // Pool 대기
+                .setResponseTimeout(Timeout.ofSeconds(30)) // 응답 대기
+                .build()
 
         // HttpClient
-        val httpClient = HttpClientBuilder.create()
-            .setConnectionManager(connectionManager)
-            .setDefaultRequestConfig(requestConfig)
-
-            // Keep-Alive
-            .setKeepAliveStrategy { _, _ ->
-                TimeValue.ofSeconds(30) // 30초
-            }
-
-            // 유휴/만료 연결 정리
-            .evictIdleConnections(TimeValue.ofSeconds(60)) // 60초
-            .evictExpiredConnections()
-
-            .build()
+        val httpClient =
+            HttpClientBuilder
+                .create()
+                .setConnectionManager(connectionManager)
+                .setDefaultRequestConfig(requestConfig)
+                // Keep-Alive
+                .setKeepAliveStrategy { _, _ ->
+                    TimeValue.ofSeconds(30) // 30초
+                }
+                // 유휴/만료 연결 정리
+                .evictIdleConnections(TimeValue.ofSeconds(60)) // 60초
+                .evictExpiredConnections()
+                .build()
 
         return RestTemplate(HttpComponentsClientHttpRequestFactory(httpClient))
     }

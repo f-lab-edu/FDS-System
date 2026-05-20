@@ -30,13 +30,14 @@ class Transaction private constructor(
         check(status == TransactionStatus.PENDING) { "PENDING 상태만 완료할 수 있습니다." }
         return Completion(
             transaction = copyWith(status = TransactionStatus.COMPLETED),
-            event = TransferCompleted(
-                transactionId = id.value,
-                senderUserId = senderId.value,
-                receiverUserId = receiverId.value,
-                amount = amount.money.rawValue,
-                currency = amount.currency.name,
-            ),
+            event =
+                TransferCompleted(
+                    transactionId = id.value,
+                    senderUserId = senderId.value,
+                    receiverUserId = receiverId.value,
+                    amount = amount.money.rawValue,
+                    currency = amount.currency.name,
+                ),
         )
     }
 
@@ -47,26 +48,30 @@ class Transaction private constructor(
     }
 
     fun isCompleted(): Boolean = status == TransactionStatus.COMPLETED
+
     fun isPending(): Boolean = status == TransactionStatus.PENDING
+
     fun isFailed(): Boolean = status == TransactionStatus.FAILED
 
     private fun copyWith(
         status: TransactionStatus = this.status,
         failReason: String? = this.failReason,
-    ): Transaction = Transaction(
-        id = id,
-        senderId = senderId,
-        receiverId = receiverId,
-        amount = amount,
-        status = status,
-        createdAt = createdAt,
-        failReason = failReason,
-    )
+    ): Transaction =
+        Transaction(
+            id = id,
+            senderId = senderId,
+            receiverId = receiverId,
+            amount = amount,
+            status = status,
+            createdAt = createdAt,
+            failReason = failReason,
+        )
 
     override fun equals(other: Any?): Boolean = other is Transaction && other.id == id
+
     override fun hashCode(): Int = id.hashCode()
-    override fun toString(): String =
-        "Transaction(id=$id, sender=$senderId, receiver=$receiverId, amount=$amount, status=$status)"
+
+    override fun toString(): String = "Transaction(id=$id, sender=$senderId, receiver=$receiverId, amount=$amount, status=$status)"
 
     /**
      * complete() 의 결과 묶음 — 새 Transaction 과 발행할 이벤트.
@@ -118,7 +123,10 @@ class Transaction private constructor(
         ): Transaction = create(id, senderSnowFlakeId, receiverSnowFlakeId, amount, clock)
 
         /** 하위 호환 — 신규 호출은 reconstitute() 사용 권장. */
-        @Deprecated("Use reconstitute()", ReplaceWith("Transaction.reconstitute(id, senderSnowFlakeId, receiverSnowFlakeId, amount, status, createdAt, failReason)"))
+        @Deprecated(
+            "Use reconstitute()",
+            ReplaceWith("Transaction.reconstitute(id, senderSnowFlakeId, receiverSnowFlakeId, amount, status, createdAt, failReason)"),
+        )
         fun restored(
             id: SnowFlakeId,
             senderSnowFlakeId: SnowFlakeId,

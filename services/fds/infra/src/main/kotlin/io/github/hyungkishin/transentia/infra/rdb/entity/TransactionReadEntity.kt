@@ -16,10 +16,8 @@ class TransactionReadEntity(
     @Id
     @Column(nullable = false)
     val id: Long,
-
     @Column(name = "sender_user_id", nullable = false)
     val senderUserId: Long,
-
     @Column(name = "created_at", nullable = false)
     val createdAt: Instant,
 )

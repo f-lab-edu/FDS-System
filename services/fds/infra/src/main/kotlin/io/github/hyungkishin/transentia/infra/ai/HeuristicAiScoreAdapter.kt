@@ -5,14 +5,14 @@ import io.github.hyungkishin.transentia.application.required.RecentTransferCount
 import io.github.hyungkishin.transentia.container.event.TransferCompleteEvent
 import io.micrometer.core.instrument.DistributionSummary
 import io.micrometer.core.instrument.MeterRegistry
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.stereotype.Component
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.min
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import org.springframework.stereotype.Component
 
 /**
  * 휴리스틱 기반 anomaly score (ML PoC 1단계).
@@ -39,19 +39,20 @@ class HeuristicAiScoreAdapter(
     private val recentTransferCountQueryPort: RecentTransferCountQueryPort,
     meterRegistry: MeterRegistry,
 ) : AiScoreProvider {
-
-    private val scoreDistribution: DistributionSummary = DistributionSummary.builder("fds.ai.score")
-        .description("Heuristic AI score 분포 (0~1)")
-        .baseUnit("score")
-        .publishPercentiles(0.5, 0.95, 0.99)
-        .register(meterRegistry)
+    private val scoreDistribution: DistributionSummary =
+        DistributionSummary
+            .builder("fds.ai.score")
+            .description("Heuristic AI score 분포 (0~1)")
+            .baseUnit("score")
+            .publishPercentiles(0.5, 0.95, 0.99)
+            .register(meterRegistry)
 
     override fun score(event: TransferCompleteEvent): Double? {
         val raw = (
             amountFeature(event.amount) +
                 hourFeature(event) +
                 velocityFeature(event)
-            )
+        )
         // sigmoid 로 0~1 압축
         val score = 1.0 / (1.0 + exp(-(raw - 0.5) * 4.0))
         val clamped = max(0.0, min(1.0, score))

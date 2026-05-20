@@ -14,10 +14,12 @@ import org.springframework.stereotype.Component
 @ConditionalOnMissingBean(value = [AlertNotificationPort::class], ignored = [NoOpAlertNotificationAdapter::class])
 class NoOpAlertNotificationAdapter : AlertNotificationPort {
     private val log = LoggerFactory.getLogger(javaClass)
+
     override fun notify(notification: AlertNotification) {
         log.debug(
             "[noop-alert] webhook 미설정. accountId={} reason={}",
-            notification.accountId, notification.reason
+            notification.accountId,
+            notification.reason,
         )
     }
 }

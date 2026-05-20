@@ -13,8 +13,9 @@ import org.testcontainers.utility.DockerImageName
 @Configuration
 class RedisTestContainersConfig {
     companion object {
-        private val redisContainer: RedisContainer = RedisContainer(DockerImageName.parse("redis:7-alpine"))
-            .apply { start() }
+        private val redisContainer: RedisContainer =
+            RedisContainer(DockerImageName.parse("redis:7-alpine"))
+                .apply { start() }
 
         init {
             System.setProperty("spring.data.redis.host", redisContainer.host)

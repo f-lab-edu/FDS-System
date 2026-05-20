@@ -3,13 +3,13 @@ package io.github.hyungkishin.transentia.relay.dlq
 import io.github.hyungkishin.transentia.application.required.TransferEventsOutboxRepository
 import io.micrometer.core.instrument.MeterRegistry
 import jakarta.annotation.PostConstruct
+import java.time.Duration
+import java.time.Instant
+import java.util.concurrent.atomic.AtomicLong
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
-import java.time.Duration
-import java.time.Instant
-import java.util.concurrent.atomic.AtomicLong
 
 /**
  * DLQ Retry Worker.
@@ -63,7 +63,8 @@ class DlqRetryScheduler(
                 revivedCount.addAndGet(revived.toLong())
                 log.info(
                     "[DLQ-RETRY] {} 건 DEAD_LETTER → PENDING (older than {}min)",
-                    revived, coolDownMinutes
+                    revived,
+                    coolDownMinutes,
                 )
             }
         } catch (e: Exception) {
@@ -71,9 +72,10 @@ class DlqRetryScheduler(
         }
     }
 
-    private fun safeCount(): Long = try {
-        outboxRepository.countDeadLetters()
-    } catch (e: Exception) {
-        0L
-    }
+    private fun safeCount(): Long =
+        try {
+            outboxRepository.countDeadLetters()
+        } catch (e: Exception) {
+            0L
+        }
 }

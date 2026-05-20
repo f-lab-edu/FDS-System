@@ -22,7 +22,7 @@ dependencies {
     // Spring Cloud Stream - 직접 추가
     implementation("org.springframework.cloud:spring-cloud-stream")
     implementation("org.springframework.cloud:spring-cloud-stream-binder-kafka-streams")
-    
+
     // Kafka Streams Avro Serde - 필수!
     implementation("io.confluent:kafka-streams-avro-serde:7.9.2")
     implementation("io.confluent:kafka-avro-serializer:7.9.2")

@@ -12,12 +12,13 @@ import org.testcontainers.containers.PostgreSQLContainer
 class PostgresTestContainersConfig {
     companion object {
         @Suppress("HttpUrlsUsage")
-        private val container: PostgreSQLContainer<*> = PostgreSQLContainer("postgres:15-alpine")
-            .withDatabaseName("transfer_test")
-            .withUsername("test")
-            .withPassword("test")
-            .withInitScript("test-schema.sql")
-            .apply { start() }
+        private val container: PostgreSQLContainer<*> =
+            PostgreSQLContainer("postgres:15-alpine")
+                .withDatabaseName("transfer_test")
+                .withUsername("test")
+                .withPassword("test")
+                .withInitScript("test-schema.sql")
+                .apply { start() }
 
         init {
             System.setProperty("spring.datasource.url", container.jdbcUrl)

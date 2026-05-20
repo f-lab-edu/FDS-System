@@ -9,5 +9,5 @@ data class TransferPayload(
     val receiverUserId: Long,
     val amount: Long,
     val status: String,
-    val occurredAt: Long
+    val occurredAt: Long,
 )

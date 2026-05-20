@@ -5,9 +5,10 @@ import org.springframework.http.server.ServletServerHttpResponse
 
 interface ApiResponseCustomizer {
     fun supports(body: Any?): Boolean
+
     fun customize(
         body: Any?,
         request: ServletServerHttpRequest,
-        response: ServletServerHttpResponse
+        response: ServletServerHttpResponse,
     )
 }

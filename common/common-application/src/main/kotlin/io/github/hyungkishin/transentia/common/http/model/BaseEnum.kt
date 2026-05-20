@@ -10,8 +10,9 @@ interface BaseEnum : Serializable {
 
     companion object {
         @JvmStatic
-        fun <S> getEnum(cls: Class<S>, code: Any): S? where S : Enum<*>, S : BaseEnum {
-            return cls.enumConstants?.firstOrNull { it.code == code }
-        }
+        fun <S> getEnum(
+            cls: Class<S>,
+            code: Any,
+        ): S? where S : Enum<*>, S : BaseEnum = cls.enumConstants?.firstOrNull { it.code == code }
     }
 }

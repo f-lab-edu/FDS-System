@@ -11,10 +11,10 @@ data class RiskRuleHit(
     val ruleCode: String,
     val severity: RuleSeverity,
     val hit: Boolean = true,
-    val score: Double? = null,    // 룰별 점수(선택)
-    val weight: Int = 1,          // 룰 가중치(선택)
+    val score: Double? = null, // 룰별 점수(선택)
+    val weight: Int = 1, // 룰 가중치(선택)
     val reason: String? = null,
-    val occurredAt: Instant = Instant.now()
+    val occurredAt: Instant = Instant.now(),
 ) {
     init {
         require(ruleCode.isNotBlank()) { "ruleCode 는 비어있을 수 없습니다." }

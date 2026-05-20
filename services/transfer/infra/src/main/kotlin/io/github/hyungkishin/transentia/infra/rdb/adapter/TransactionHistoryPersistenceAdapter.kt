@@ -10,9 +10,7 @@ import org.springframework.stereotype.Component
 class TransactionHistoryPersistenceAdapter(
     private val jpaRepository: TransactionHistoryJpaRepository,
 ) : TransactionHistoryRepository {
-
     override fun save(transactionHistory: TransactionHistory) {
         jpaRepository.save(TransactionHistoryJpaEntity.from(transactionHistory))
     }
-
 }

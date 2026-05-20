@@ -1,0 +1,96 @@
+# detekt 정책. buildUponDefaultConfig=true 라 default rule 위에 override.
+build:
+  maxIssues: 0
+  excludeCorrectable: false
+
+config:
+  validation: true
+  warningsAsErrors: false
+
+console-reports:
+  active: true
+
+output-reports:
+  active: true
+
+complexity:
+  active: true
+  ComplexCondition:
+    active: true
+    threshold: 4
+  ComplexMethod:
+    active: true
+    threshold: 25         # Kotlin DSL/Spring config 가 큰 편이라 25 까지 허용
+    ignoreSingleWhenExpression: true
+  LongMethod:
+    active: true
+    threshold: 80
+  LongParameterList:
+    active: true
+    functionThreshold: 8
+    constructorThreshold: 12  # 도메인 entity 가 다인자라 약간 여유
+  TooManyFunctions:
+    active: false           # 도메인 객체에 predicate 가 많은 경우 자주 걸려 비활성
+
+empty-blocks:
+  active: true
+
+exceptions:
+  TooGenericExceptionCaught:
+    active: false           # consumer 의 catch(Exception e) 패턴 유지
+  ThrowingExceptionsWithoutMessageOrCause:
+    active: true
+  SwallowedException:
+    active: true
+
+formatting:
+  active: true              # detekt-formatting 활성 (ktlint 와 중복은 ktlint 가 우선)
+  android: false
+  autoCorrect: false
+  MaximumLineLength:
+    active: true
+    maxLineLength: 140
+  Indentation:
+    active: false           # ktlint 가 책임
+  Wrapping:
+    active: false           # ktlint 가 책임
+
+naming:
+  ClassNaming:
+    active: true
+  FunctionNaming:
+    active: true
+    ignoreAnnotated: ['Test', 'ParameterizedTest', 'DisplayName']
+  MemberNameEqualsClassName:
+    active: false           # companion factory 'create' 등 흔함
+
+performance:
+  active: true
+  SpreadOperator:
+    active: false           # runApplication(*args) 같은 흔한 케이스
+
+potential-bugs:
+  active: true
+  UnsafeCallOnNullableType:
+    active: true
+
+style:
+  MagicNumber:
+    active: false           # 도메인 룰 임계치(2_000_000_00 등) 다수
+  MaxLineLength:
+    active: true
+    maxLineLength: 140
+  ReturnCount:
+    active: true
+    max: 5
+  WildcardImport:
+    active: true
+    excludes: ['**/*Test.kt', '**/*Tests.kt']
+  UnusedPrivateMember:
+    active: true
+  ForbiddenComment:
+    active: true
+    values: ['FIXME:', 'TODO:', 'STOPSHIP:']    # TODO/FIXME 잔존 게이트 — CI 와 정합
+    excludes: ['**/test/**', '**/testFixtures/**']
+  UseDataClass:
+    active: false

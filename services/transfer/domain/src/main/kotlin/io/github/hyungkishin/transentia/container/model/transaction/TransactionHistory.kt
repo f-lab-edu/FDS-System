@@ -2,7 +2,6 @@ package io.github.hyungkishin.transentia.container.model.transaction
 
 import io.github.hyungkishin.transentia.common.model.Amount
 import io.github.hyungkishin.transentia.common.snowflake.SnowFlakeId
-import io.github.hyungkishin.transentia.common.model.Money
 
 class TransactionHistory private constructor(
     val id: SnowFlakeId,
@@ -13,7 +12,10 @@ class TransactionHistory private constructor(
     val reason: String?,
 ) {
     companion object {
-        fun of(transaction: Transaction, id: SnowFlakeId): TransactionHistory =
+        fun of(
+            transaction: Transaction,
+            id: SnowFlakeId,
+        ): TransactionHistory =
             TransactionHistory(
                 id = id,
                 transactionId = transaction.id,

@@ -12,5 +12,4 @@ interface TransferEventPublisher {
      * 호출자가 이미 비동기 스레드에서 실행 중
      */
     fun publish(event: TransferCompleted)
-
 }

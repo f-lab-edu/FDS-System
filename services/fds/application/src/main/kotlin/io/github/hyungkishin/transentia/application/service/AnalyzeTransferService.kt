@@ -10,11 +10,11 @@ import io.github.hyungkishin.transentia.container.event.TransferCompleteEvent
 import io.github.hyungkishin.transentia.container.model.FraudeRule
 import io.github.hyungkishin.transentia.container.model.RiskLog
 import io.github.hyungkishin.transentia.container.model.RiskRuleHit
+import java.time.Instant
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.time.Instant
 
 @Service
 class AnalyzeTransferService(
@@ -39,47 +39,56 @@ class AnalyzeTransferService(
         val activeRules = fraudRuleRepository.findAllActive()
 
         // 각 룰 실행 및 위반 감지
-        val ruleHits = activeRules.mapNotNull { rule ->
-            evaluateRule(rule, event)
-        }
+        val ruleHits =
+            activeRules.mapNotNull { rule ->
+                evaluateRule(rule, event)
+            }
 
         // 최종 판정
         val decision = determineDecision(ruleHits)
         val reasons = ruleHits.map { it.ruleCode }
 
         // RiskLog 생성
-        val riskLog = RiskLog.of(
-            txId = event.eventId,
-            decision = decision,
-            reasons = reasons,
-            aiScore = aiScoreProvider.score(event),
-            ruleHits = ruleHits
-        )
+        val riskLog =
+            RiskLog.of(
+                txId = event.eventId,
+                decision = decision,
+                reasons = reasons,
+                aiScore = aiScoreProvider.score(event),
+                ruleHits = ruleHits,
+            )
 
         // 분석 결과 영속화 (같은 트랜잭션)
         riskAnalysisRepository.save(event, riskLog, MDC.get("traceId"))
 
         log.info(
             "@@@@@@@[FDS] 분석 완료 - transferId={}, decision={}, hitCount={}",
-            event.eventId, decision, ruleHits.size
+            event.eventId,
+            decision,
+            ruleHits.size,
         )
 
         return riskLog
     }
 
-    private fun evaluateRule(rule: FraudeRule, event: TransferCompleteEvent): RiskRuleHit? {
-        return when (rule.ruleType) {
+    private fun evaluateRule(
+        rule: FraudeRule,
+        event: TransferCompleteEvent,
+    ): RiskRuleHit? =
+        when (rule.ruleType) {
             "HIGH_AMOUNT" -> checkHighAmount(rule, event)
             "SINGLE_HIGH_AMOUNT" -> checkSingleHighAmount(rule, event)
             "RAPID_TRANSFER" -> checkRapidTransfer(rule, event)
             else -> null
         }
-    }
 
     /**
      * 단일 거래 2000만원 이상 탐지
      */
-    private fun checkSingleHighAmount(rule: FraudeRule, event: TransferCompleteEvent): RiskRuleHit? {
+    private fun checkSingleHighAmount(
+        rule: FraudeRule,
+        event: TransferCompleteEvent,
+    ): RiskRuleHit? {
         val threshold = (rule.threshold["amount"] as? Number)?.toLong() ?: return null
 
         return if (event.amount >= threshold) {
@@ -89,15 +98,20 @@ class AnalyzeTransferService(
                 severity = RuleSeverity.CRITICAL, // RuleSeverity 에 CRITICAL 추가 추천
                 weight = rule.weight.toInt(),
                 reason = "단일 거래 고액 감지: ${event.amount} ≥ $threshold",
-                occurredAt = Instant.now()
+                occurredAt = Instant.now(),
             )
-        } else null
+        } else {
+            null
+        }
     }
 
     /**
      * 고액 송금 탐지
      */
-    private fun checkHighAmount(rule: FraudeRule, event: TransferCompleteEvent): RiskRuleHit? {
+    private fun checkHighAmount(
+        rule: FraudeRule,
+        event: TransferCompleteEvent,
+    ): RiskRuleHit? {
         val threshold = (rule.threshold["amount"] as? Number)?.toLong() ?: return null
 
         return if (event.amount > threshold) {
@@ -107,16 +121,21 @@ class AnalyzeTransferService(
                 severity = RuleSeverity.HIGH,
                 weight = rule.weight.toInt(),
                 reason = "고액 송금 감지: ${event.amount} > $threshold",
-                occurredAt = Instant.now()
+                occurredAt = Instant.now(),
             )
-        } else null
+        } else {
+            null
+        }
     }
 
     /**
      * 단기간 다중 송금 탐지
      * threshold.windowMinutes 분 내 sender 의 송금 횟수가 threshold.maxCount 초과 시 위반.
      */
-    private fun checkRapidTransfer(rule: FraudeRule, event: TransferCompleteEvent): RiskRuleHit? {
+    private fun checkRapidTransfer(
+        rule: FraudeRule,
+        event: TransferCompleteEvent,
+    ): RiskRuleHit? {
         val windowMinutes = (rule.threshold["windowMinutes"] as? Number)?.toLong() ?: return null
         val maxCount = (rule.threshold["maxCount"] as? Number)?.toLong() ?: return null
 
@@ -130,9 +149,11 @@ class AnalyzeTransferService(
                 severity = RuleSeverity.HIGH,
                 weight = rule.weight.toInt(),
                 reason = "최근 ${windowMinutes}분 내 송금 ${count}건 > 임계치 ${maxCount}건",
-                occurredAt = Instant.now()
+                occurredAt = Instant.now(),
             )
-        } else null
+        } else {
+            null
+        }
     }
 
     /**

@@ -8,7 +8,6 @@ import org.springframework.context.annotation.Configuration
 @Configuration
 @ConfigurationProperties(prefix = "kafka-consumer-config")
 class KafkaConsumerConfigData {
-
     @NotBlank
     lateinit var keyDeserializer: String
 
@@ -34,7 +33,7 @@ class KafkaConsumerConfigData {
     var autoStartup: Boolean = true
 
     @NotNull
-    var concurrencyLevel: Int = 3  // 반드시 1 이상이어야 하므로 기본값 3
+    var concurrencyLevel: Int = 3 // 반드시 1 이상이어야 하므로 기본값 3
 
     @NotNull
     var sessionTimeoutMs: Int = 10000
@@ -56,5 +55,4 @@ class KafkaConsumerConfigData {
 
     @NotNull
     var maxPartitionFetchBytesBoostFactor: Int = 1
-
 }

@@ -4,15 +4,14 @@ import io.github.hyungkishin.transentia.application.required.AiScoreProvider
 import io.github.hyungkishin.transentia.container.event.TransferCompleteEvent
 import io.micrometer.core.instrument.DistributionSummary
 import io.micrometer.core.instrument.MeterRegistry
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.jdbc.core.JdbcTemplate
-import org.springframework.stereotype.Component
 import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.sqrt
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.stereotype.Component
 
 /**
  * 통계 기반 anomaly score (ML PoC 2단계).
@@ -35,12 +34,13 @@ class StatisticalAiScoreAdapter(
     private val jdbcTemplate: JdbcTemplate,
     meterRegistry: MeterRegistry,
 ) : AiScoreProvider {
-
-    private val scoreDistribution: DistributionSummary = DistributionSummary.builder("fds.ai.score")
-        .description("Statistical AI score 분포 (0~1) — z-score 기반")
-        .baseUnit("score")
-        .publishPercentiles(0.5, 0.95, 0.99)
-        .register(meterRegistry)
+    private val scoreDistribution: DistributionSummary =
+        DistributionSummary
+            .builder("fds.ai.score")
+            .description("Statistical AI score 분포 (0~1) — z-score 기반")
+            .baseUnit("score")
+            .publishPercentiles(0.5, 0.95, 0.99)
+            .register(meterRegistry)
 
     override fun score(event: TransferCompleteEvent): Double? {
         val stats = loadStatsSafe(event.senderId) ?: return 0.0
@@ -58,9 +58,10 @@ class StatisticalAiScoreAdapter(
         return clamped
     }
 
-    private fun loadStatsSafe(senderId: Long): UserAmountStats? = try {
-        jdbcTemplate.queryForObject(
-            """
+    private fun loadStatsSafe(senderId: Long): UserAmountStats? =
+        try {
+            jdbcTemplate.queryForObject(
+                """
             SELECT
               COUNT(*) AS cnt,
               COALESCE(AVG(LN(GREATEST(amount, 1))), 0)    AS mean_log,
@@ -70,18 +71,18 @@ class StatisticalAiScoreAdapter(
               AND status = 'COMPLETED'
               AND created_at >= now() - INTERVAL '30 days'
             """,
-            { rs, _ ->
-                UserAmountStats(
-                    count = rs.getLong("cnt"),
-                    meanLogAmount = rs.getDouble("mean_log"),
-                    stdLogAmount = rs.getDouble("std_log"),
-                )
-            },
-            senderId,
-        )
-    } catch (e: Exception) {
-        null
-    }
+                { rs, _ ->
+                    UserAmountStats(
+                        count = rs.getLong("cnt"),
+                        meanLogAmount = rs.getDouble("mean_log"),
+                        stdLogAmount = rs.getDouble("std_log"),
+                    )
+                },
+                senderId,
+            )
+        } catch (e: Exception) {
+            null
+        }
 
     private data class UserAmountStats(
         val count: Long,

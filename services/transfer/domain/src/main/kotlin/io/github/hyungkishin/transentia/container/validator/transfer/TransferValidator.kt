@@ -14,8 +14,12 @@ import io.github.hyungkishin.transentia.container.model.user.User
  * - 수신자 assertCanReceive
  */
 object TransferValidator {
-
-    fun validate(sender: User, receiver: User, amount: Amount, dailyAccumulated: Long = 0L) {
+    fun validate(
+        sender: User,
+        receiver: User,
+        amount: Amount,
+        dailyAccumulated: Long = 0L,
+    ) {
         assertAmountPositive(amount)
         sender.assertCanSend(amount, dailyAccumulated)
         receiver.assertCanReceive()
@@ -23,8 +27,11 @@ object TransferValidator {
 
     /** 하위 호환 — 신규 호출은 validate() 또는 sender.assertCanSend() 권장. */
     @Deprecated("Use validate() or sender.assertCanSend()")
-    fun validateSender(sender: User, amount: Amount, dailyAccumulated: Long = 0L) =
-        sender.assertCanSend(amount, dailyAccumulated)
+    fun validateSender(
+        sender: User,
+        amount: Amount,
+        dailyAccumulated: Long = 0L,
+    ) = sender.assertCanSend(amount, dailyAccumulated)
 
     @Deprecated("Use validate() or receiver.assertCanReceive()")
     fun validateReceiver(receiver: User) = receiver.assertCanReceive()

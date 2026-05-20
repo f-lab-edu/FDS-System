@@ -1,9 +1,9 @@
 package io.github.hyungkishin.transentia.api.performance
 
+import java.util.concurrent.ThreadLocalRandom
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-import java.util.concurrent.ThreadLocalRandom
 
 /**
  * 내부 더미 엔드포인트
@@ -12,7 +12,6 @@ import java.util.concurrent.ThreadLocalRandom
 @RestController
 @RequestMapping("/dummy")
 class DummyController {
-
     /**
      * 빠른 응답 (10ms 지연)
      */
@@ -22,7 +21,7 @@ class DummyController {
         return DummyResponse(
             message = "Fast response",
             timestamp = System.currentTimeMillis(),
-            data = generateRandomString(100)
+            data = generateRandomString(100),
         )
     }
 
@@ -35,7 +34,7 @@ class DummyController {
         return DummyResponse(
             message = "Medium response",
             timestamp = System.currentTimeMillis(),
-            data = generateRandomString(500)
+            data = generateRandomString(500),
         )
     }
 
@@ -48,7 +47,7 @@ class DummyController {
         return DummyResponse(
             message = "Slow response",
             timestamp = System.currentTimeMillis(),
-            data = generateRandomString(1000)
+            data = generateRandomString(1000),
         )
     }
 
@@ -62,7 +61,7 @@ class DummyController {
         return DummyResponse(
             message = "Variable response (${delay}ms)",
             timestamp = System.currentTimeMillis(),
-            data = generateRandomString(300)
+            data = generateRandomString(300),
         )
     }
 
@@ -77,5 +76,5 @@ class DummyController {
 data class DummyResponse(
     val message: String,
     val timestamp: Long,
-    val data: String
+    val data: String,
 )
